@@ -301,7 +301,7 @@ const app = Vue.createApp({
   },
   template: `
     <main class="app-shell">
-      <header class="hero"><div><p class="eyebrow">URL PARAMETER STUDIO</p><h1>URLパラメータを、<br>迷わず作る。</h1><p>GA4・Adobe・独自仕様に対応。ログインなしで、URLの作成・解析・コピーをすぐに使えます。</p></div><div class="privacy-card"><strong>アカウントなしで始められます</strong><span>保存する時だけ、保存方法を選べます。</span></div></header>
+      <header class="hero"><div><p class="eyebrow">URL PARAMETER STUDIO</p><h1>URLパラメータを、<br>迷わず作る。</h1><p>GA4・Adobe・独自仕様に対応。</p></div></header>
       <nav class="tabs" aria-label="機能メニュー"><button v-for="tab in [{id:'builder',label:'URLを作る'},{id:'library',label:'ライブラリ'},{id:'matrix',label:'一括生成'},{id:'profiles',label:'プロファイル'}]" :key="tab.id" type="button" :class="{active:activeTab===tab.id}" @click="activeTab=tab.id">{{ tab.label }}</button></nav>
 
       <section v-if="activeTab==='builder'" class="workspace">
