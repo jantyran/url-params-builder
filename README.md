@@ -1,25 +1,32 @@
-# URLパラメータ作成ツール
+# URL Parameter Studio
 
-GA4などのアクセス解析で利用する、UTMパラメータ付きURLを正確に作成するブラウザ完結型ツールです。サーバーへの送信やアカウント登録は不要です。
+GA4のUTM、Adobe Analyticsの追跡コード、広告・CRM・社内独自のパラメータを、正確に解析・生成・検査するブラウザ完結型ツールです。サーバーへの送信やアカウント登録は不要です。
 
 ## できること
 
-- `utm_source`、`utm_medium`、`utm_campaign` を必須項目として、計測URLを生成
-- `utm_content`、`utm_term`、`utm_id`、`utm_source_platform` も任意で付与
-- メール、SNS広告、Google広告、QRコードなどのテンプレートで入力を省略
-- 既存のクエリパラメータ・ハッシュを保持し、URLエンコードを安全に処理
-- 作成した設定をブラウザに保存、再利用、削除
-- 保存済み設定をCSVで出力
-- 命名ルールのヒントを表示し、集計のばらつきを防止
+- URL貼り付けによる既存クエリ・ハッシュの解析と編集
+- GA4 UTM、Adobe Tracking Code、広告・CRM、任意パラメータのプロファイル
+- 任意のキー・値の追加、並び替え、削除
+- 既存のクエリ・ハッシュを保持し、URLエンコードを安全に処理
+- 重複キー、URL長、形式、認証情報・個人情報らしき値の検査
+- URLとノートのブラウザ内保存、検索、編集、CSV出力、JSONバックアップ／復元
+- キャンペーンの条件を掛け合わせる一括URL生成
+- 自分用のローカルプロファイル保存
 
 > 保存データはこのブラウザの `localStorage` にのみ保存されます。別の端末・ブラウザとの自動共有は行いません。
+
+## ログインについて
+
+現行版はログイン不要です。URLの作成、解析、任意パラメータの追加、ノート、ローカル保存、CSV／JSON出力はすべて匿名で利用できます。
+
+将来のログイン機能は、端末間同期、共有編集、組織共通の命名ルール、承認、変更履歴のためだけに追加します。ログインしない利用者の基本機能を制限する予定はありません。
 
 ## 使い方
 
 1. 遷移先URLを入力します。
-2. 必須の `utm_source`（参照元）、`utm_medium`（媒体）、`utm_campaign`（施策名）を設定します。
-3. 必要に応じて、クリエイティブ識別用の `utm_content` や検索語句用の `utm_term` を追加します。
-4. 生成URLをコピー、または「設定を保存」して次回再利用します。
+2. 利用目的に応じてGA4、Adobe、汎用などのプロファイルを選びます。任意のキー・値も追加できます。
+3. 必要に応じてノートを残し、品質チェックを確認します。
+4. 生成URLをコピー、または「この端末に保存」して次回再利用します。
 
 例：
 
@@ -34,7 +41,7 @@ https://example.com/service?plan=standard&utm_source=newsletter&utm_medium=email
 - `utm_campaign` は施策名と一致させる
 - 同一施策の広告素材やCTAを比較する場合は `utm_content` を変える
 
-詳細は [Google Analytics の公式ガイド](https://support.google.com/analytics/answer/10917952) を参照してください。
+GA4については [Google Analytics の公式ガイド](https://support.google.com/analytics/answer/10917952) を、Adobe Tracking Codeについては [Adobeのキャンペーン計測ガイド](https://experienceleague.adobe.com/en/docs/analytics/implementation/use-cases/campaign-tracking) を参照してください。
 
 ## ローカルで使う
 
@@ -59,7 +66,7 @@ https://example.com/service?plan=standard&utm_source=newsletter&utm_medium=email
 
 ## 注意
 
-UTMの命名規則は組織のレポート設計に合わせて運用してください。Google Adsなど、連携・自動タグ設定済みの広告媒体では、手動UTM付与の方針を事前に確認することをおすすめします。
+パラメータの命名規則は組織のレポート設計に合わせて運用してください。Google Adsなど、連携・自動タグ設定済みの広告媒体では、手動パラメータ付与の方針を事前に確認することをおすすめします。
 
 ## 次期版の設計
 

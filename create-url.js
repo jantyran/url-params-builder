@@ -1,136 +1,307 @@
-const STORAGE_KEY = 'url-params-builder.records.v2';
-const LEGACY_COOKIE_KEY = 'createUrlParams';
+const DOCUMENTS_KEY = 'url-parameter-studio.documents.v1';
+const PROFILES_KEY = 'url-parameter-studio.profiles.v1';
+const LEGACY_RECORDS_KEY = 'url-params-builder.records.v2';
 
-const PARAMS = [
-  ['utm_source', 'source'], ['utm_medium', 'medium'], ['utm_campaign', 'campaign'],
-  ['utm_content', 'content'], ['utm_term', 'term'], ['utm_id', 'campaignId'],
-  ['utm_source_platform', 'sourcePlatform']
-];
-const PRESETS = [
-  { label: '選択してください', source: '', medium: '' },
-  { label: 'メール配信', source: 'newsletter', medium: 'email' },
-  { label: 'SNS オーガニック', source: 'instagram', medium: 'social' },
-  { label: 'SNS 広告', source: 'meta', medium: 'paid_social', sourcePlatform: 'meta_ads' },
-  { label: 'Google 広告', source: 'google', medium: 'cpc', sourcePlatform: 'google_ads' },
-  { label: '外部サイト掲載', source: '', medium: 'referral' },
-  { label: 'QRコード・紙媒体', source: 'qrcode', medium: 'offline' }
-];
-const SOURCE_OPTIONS = ['newsletter', 'mailmagazine', 'google', 'yahoo', 'facebook', 'instagram', 'x', 'linkedin', 'qrcode', 'brochure', 'other'];
-const MEDIUM_OPTIONS = ['email', 'social', 'paid_social', 'cpc', 'display', 'referral', 'affiliate', 'offline', 'other'];
-const PLATFORM_OPTIONS = ['', 'google_ads', 'meta_ads', 'linkedin_ads', 'x_ads', 'yahoo_ads', 'other'];
+const COMMON_SOURCES = ['newsletter', 'mailmagazine', 'google', 'yahoo', 'facebook', 'instagram', 'x', 'linkedin', 'qrcode', 'brochure', 'partner'];
+const COMMON_MEDIA = ['email', 'social', 'paid_social', 'cpc', 'display', 'referral', 'affiliate', 'offline'];
 
-function emptyForm() {
-  return { name: '', url: '', source: '', medium: '', campaign: '', content: '', term: '', campaignId: '', sourcePlatform: '', preset: '' };
+const STARTER_PROFILES = [
+  { id: 'generic', name: '汎用パラメータ', description: '任意のキーと値を自由に追加できます。', fields: [] },
+  { id: 'ga4', name: 'GA4 UTM', description: '一般的なUTMパラメータを入力します。', fields: [
+    { key: 'utm_source', label: '参照元', required: true, choices: COMMON_SOURCES, normalize: 'slug' },
+    { key: 'utm_medium', label: 'メディア', required: true, choices: COMMON_MEDIA, normalize: 'slug' },
+    { key: 'utm_campaign', label: 'キャンペーン名', required: true, normalize: 'slug' },
+    { key: 'utm_content', label: 'クリエイティブ / CTA', normalize: 'slug' },
+    { key: 'utm_term', label: 'キーワード', normalize: 'slug' },
+    { key: 'utm_id', label: 'キャンペーンID', normalize: 'slug' },
+    { key: 'utm_source_platform', label: '広告プラットフォーム', choices: ['google_ads', 'meta_ads', 'linkedin_ads', 'x_ads'], normalize: 'slug' }
+  ] },
+  { id: 'adobe', name: 'Adobe Tracking Code', description: 'Adobe Analyticsの追跡コードなど、組織固有の形式で利用できます。', fields: [
+    { key: 'cid', label: 'Tracking Code (cid)', required: true },
+    { key: 'source', label: '参照元', choices: COMMON_SOURCES, normalize: 'slug' },
+    { key: 'campaign', label: 'キャンペーン名', normalize: 'slug' },
+    { key: 'creative', label: 'クリエイティブ', normalize: 'slug' }
+  ] },
+  { id: 'campaign', name: '広告・CRM連携', description: '広告配信やCRMに渡す独自パラメータを始めるための雛形です。', fields: [
+    { key: 'campaign_id', label: 'キャンペーンID', required: true, normalize: 'slug' },
+    { key: 'channel', label: 'チャネル', required: true, choices: ['email', 'paid_social', 'search', 'display', 'partner', 'offline'], normalize: 'slug' },
+    { key: 'creative_id', label: 'クリエイティブID', normalize: 'slug' },
+    { key: 'audience', label: 'オーディエンス', normalize: 'slug' }
+  ] }
+];
+
+function createId() { return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`; }
+function deepCopy(value) { return JSON.parse(JSON.stringify(value)); }
+function readStorage(key, fallback) { try { const value = JSON.parse(localStorage.getItem(key) || ''); return value ?? fallback; } catch (_) { return fallback; } }
+function writeStorage(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
+function slug(value) { return String(value || '').trim().toLowerCase().replace(/\s+/g, '_'); }
+function normalizeValue(value, rule) { return rule === 'slug' ? slug(value) : String(value || '').trim(); }
+function blankParameter(key = '', value = '') { return { id: createId(), key, value }; }
+function blankDocument() { return { id: '', title: '', note: '', profileId: 'generic', baseUrl: '', hash: '', params: [], createdAt: '', updatedAt: '' }; }
+function safeUrl(value) { try { const url = new URL(value.trim()); return ['http:', 'https:'].includes(url.protocol) ? url : null; } catch (_) { return null; } }
+function parseUrl(value) {
+  const url = safeUrl(value);
+  if (!url) throw new Error('URLの形式が正しくありません。http または https で始まるURLを入力してください。');
+  return { baseUrl: `${url.origin}${url.pathname}`, hash: url.hash, params: [...url.searchParams.entries()].map(([key, paramValue]) => blankParameter(key, paramValue)) };
 }
-function createId() {
-  return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-function normalizeValue(value) { return value.trim().toLowerCase().replace(/\s+/g, '_'); }
-function buildUrl(form) {
-  const url = new URL(form.url.trim());
-  PARAMS.forEach(([parameter, field]) => {
-    url.searchParams.delete(parameter);
-    if (form[field].trim()) url.searchParams.set(parameter, normalizeValue(form[field]));
-  });
+function buildUrl(document) {
+  const url = safeUrl(document.baseUrl);
+  if (!url) return '';
+  url.search = '';
+  document.params.forEach((param) => { if (param.key.trim()) url.searchParams.append(param.key.trim(), param.value ?? ''); });
+  url.hash = document.hash || '';
   return url.toString();
 }
-function validate(form) {
-  const errors = [];
-  if (!form.url.trim()) errors.push('遷移先URLを入力してください。');
-  else {
-    try { if (!['http:', 'https:'].includes(new URL(form.url.trim()).protocol)) errors.push('遷移先URLは http または https で始めてください。'); }
-    catch (_) { errors.push('遷移先URLの形式が正しくありません。'); }
-  }
-  [['source', '参照元'], ['medium', 'メディア'], ['campaign', 'キャンペーン名']].forEach(([field, label]) => {
-    if (!form[field].trim()) errors.push(`${label}を入力してください。`);
+function csv(rows) { return rows.map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\n'); }
+function download(filename, content, type) {
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(new Blob([content], { type }));
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+function profileFields(profile) { return profile?.fields || []; }
+function sensitiveWarning(param) {
+  const text = `${param.key}=${param.value}`.toLowerCase();
+  if (/(password|passwd|token|secret|api[_-]?key|authorization|session)/.test(text)) return '認証情報らしきキーまたは値が含まれています。URLに含めないでください。';
+  if (/[^\s@]+@[^\s@]+\.[^\s@]+/.test(param.value)) return 'メールアドレスらしき値が含まれています。個人情報をURLに含めないでください。';
+  if (/\d{3}[- ]?\d{4}[- ]?\d{4}/.test(param.value)) return '電話番号らしき値が含まれています。個人情報をURLに含めないでください。';
+  return '';
+}
+function migrateLegacyDocuments() {
+  if (localStorage.getItem(DOCUMENTS_KEY)) return readStorage(DOCUMENTS_KEY, []);
+  const legacy = readStorage(LEGACY_RECORDS_KEY, []);
+  if (!Array.isArray(legacy) || !legacy.length) return [];
+  const migrated = legacy.map((record) => {
+    const form = record.form || {};
+    const params = [
+      ['utm_source', form.source], ['utm_medium', form.medium], ['utm_campaign', form.campaign], ['utm_content', form.content],
+      ['utm_term', form.term], ['utm_id', form.campaignId], ['utm_source_platform', form.sourcePlatform]
+    ].filter(([, value]) => value).map(([key, value]) => blankParameter(key, value));
+    const parsed = safeUrl(form.url || '') ? parseUrl(form.url) : { baseUrl: form.url || '', hash: '', params: [] };
+    return { id: createId(), title: form.name || form.campaign || '移行したURL', note: '', profileId: 'ga4', baseUrl: parsed.baseUrl, hash: parsed.hash, params: params.length ? params : parsed.params, createdAt: record.createdAt || new Date().toISOString(), updatedAt: record.createdAt || new Date().toISOString() };
   });
-  return errors;
-}
-function warningsFor(form) {
-  return PARAMS.filter(([, field]) => form[field].trim() && !/^[a-z0-9_-]+$/.test(normalizeValue(form[field])))
-    .map(([parameter]) => `${parameter} は英小文字・数字・ハイフン・アンダースコアで統一すると、レポートを集計しやすくなります。`);
-}
-function readRecords() {
-  try { const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); return Array.isArray(saved) ? saved : []; }
-  catch (_) { return []; }
-}
-function migrateLegacyCookie() {
-  if (localStorage.getItem(STORAGE_KEY) || !document.cookie.includes(`${LEGACY_COOKIE_KEY}=`)) return [];
-  const match = document.cookie.match(new RegExp(`(?:^|; )${LEGACY_COOKIE_KEY}=([^;]*)`));
-  if (!match) return [];
-  try {
-    const records = JSON.parse(decodeURIComponent(match[1])).map((item) => ({
-      id: createId(), createdAt: item.created_date || new Date().toISOString(),
-      form: { ...emptyForm(), name: item.saved_name || '', url: item.url || '', source: item.utm_source || '', medium: item.utm_medium || '', campaign: item.utm_campaign || '', term: item.utm_term || '' }
-    }));
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-    return records;
-  } catch (_) { return []; }
+  writeStorage(DOCUMENTS_KEY, migrated);
+  return migrated;
 }
 
 const app = Vue.createApp({
   data() {
-    const migrated = migrateLegacyCookie();
-    return { form: emptyForm(), records: migrated.length ? migrated : readRecords(), message: '', messageType: 'success', copied: false, PRESETS, SOURCE_OPTIONS, MEDIUM_OPTIONS, PLATFORM_OPTIONS };
+    return {
+      activeTab: 'builder',
+      document: blankDocument(),
+      documents: migrateLegacyDocuments(),
+      customProfiles: readStorage(PROFILES_KEY, []),
+      pasteUrl: '',
+      message: '',
+      messageType: 'success',
+      search: '',
+      profileName: '',
+      matrixAxes: [
+        { id: createId(), key: 'utm_source', values: 'newsletter\npartner' },
+        { id: createId(), key: 'utm_content', values: 'hero_cta\nfooter_cta' }
+      ]
+    };
   },
   computed: {
-    errors() { return validate(this.form); },
-    warnings() { return warningsFor(this.form); },
-    outputUrl() {
-      if (this.errors.some((error) => error.includes('URL'))) return '';
-      try { return buildUrl(this.form); } catch (_) { return ''; }
+    profiles() { return [...STARTER_PROFILES, ...this.customProfiles]; },
+    activeProfile() { return this.profiles.find((profile) => profile.id === this.document.profileId) || STARTER_PROFILES[0]; },
+    outputUrl() { return buildUrl(this.document); },
+    errors() {
+      const errors = [];
+      if (!this.document.baseUrl.trim()) errors.push('遷移先URLを入力してください。');
+      else if (!safeUrl(this.document.baseUrl)) errors.push('遷移先URLの形式が正しくありません。');
+      const required = profileFields(this.activeProfile).filter((field) => field.required);
+      required.forEach((field) => { if (!this.paramValue(field.key).trim()) errors.push(`${field.label}（${field.key}）を入力してください。`); });
+      this.document.params.forEach((param, index) => { if (param.value && !param.key.trim()) errors.push(`${index + 1}行目のパラメータ名を入力してください。`); });
+      return errors;
+    },
+    warnings() {
+      const warnings = [];
+      const keys = new Map();
+      this.document.params.forEach((param) => {
+        const key = param.key.trim();
+        if (!key) return;
+        keys.set(key, (keys.get(key) || 0) + 1);
+        if (!/^[A-Za-z][A-Za-z0-9_.-]*$/.test(key)) warnings.push(`${key}: 一般的なパラメータ名の形式ではありません。`);
+        const sensitive = sensitiveWarning(param);
+        if (sensitive) warnings.push(`${key}: ${sensitive}`);
+      });
+      [...keys.entries()].filter(([, count]) => count > 1).forEach(([key]) => warnings.push(`${key}: 同じキーが複数あります。意図した設定か確認してください。`));
+      if (this.outputUrl.length > 2000) warnings.push('生成URLが2,000文字を超えています。配信先の上限を確認してください。');
+      return [...new Set(warnings)];
+    },
+    filteredDocuments() {
+      const word = this.search.trim().toLowerCase();
+      if (!word) return this.documents;
+      return this.documents.filter((item) => `${item.title} ${item.note} ${buildUrl(item)}`.toLowerCase().includes(word));
+    },
+    matrixResults() {
+      if (!this.outputUrl) return [];
+      const axes = this.matrixAxes.map((axis) => ({ key: axis.key.trim(), values: axis.values.split(/\n|,/).map((value) => value.trim()).filter(Boolean) })).filter((axis) => axis.key && axis.values.length);
+      if (!axes.length) return [];
+      let variants = [{ params: deepCopy(this.document.params), labels: [] }];
+      axes.forEach((axis) => {
+        variants = variants.flatMap((variant) => axis.values.map((value) => ({
+          params: this.replaceParameter(variant.params, axis.key, value), labels: [...variant.labels, `${axis.key}=${value}`]
+        })));
+      });
+      return variants.slice(0, 200).map((variant) => ({ label: variant.labels.join(' / '), url: buildUrl({ ...this.document, params: variant.params }) }));
     }
   },
   methods: {
-    applyPreset() {
-      const preset = PRESETS.find((item) => item.label === this.form.preset);
-      if (!preset) return;
-      ['source', 'medium', 'sourcePlatform'].forEach((field) => { if (preset[field] !== undefined) this.form[field] = preset[field]; });
-    },
     notify(message, type = 'success') { this.message = message; this.messageType = type; },
+    paramValue(key) { return this.document.params.find((param) => param.key === key)?.value || ''; },
+    fieldFor(key) { return profileFields(this.activeProfile).find((field) => field.key === key); },
+    displayLabel(param) { return this.fieldFor(param.key)?.label || '任意パラメータ'; },
+    parsePastedUrl() {
+      try {
+        const parsed = parseUrl(this.pasteUrl);
+        this.document.baseUrl = parsed.baseUrl;
+        this.document.hash = parsed.hash;
+        this.document.params = parsed.params;
+        this.notify('URLを解析しました。パラメータを確認・編集できます。');
+      } catch (error) { this.notify(error.message, 'error'); }
+    },
+    applyProfile() {
+      const profile = this.activeProfile;
+      const existing = new Map(this.document.params.map((param) => [param.key, param.value]));
+      const fields = profileFields(profile);
+      if (!fields.length) return this.notify('汎用プロファイルでは任意のキーと値を追加できます。');
+      const managedKeys = new Set(fields.map((field) => field.key));
+      const profileParams = fields.map((field) => blankParameter(field.key, existing.get(field.key) || ''));
+      const unknownParams = this.document.params.filter((param) => !managedKeys.has(param.key));
+      this.document.params = [...profileParams, ...unknownParams];
+      this.notify(`${profile.name}の項目を適用しました。`);
+    },
+    changeProfile() { this.applyProfile(); },
+    addParameter() { this.document.params.push(blankParameter()); },
+    removeParameter(id) { this.document.params = this.document.params.filter((param) => param.id !== id); },
+    moveParameter(index, direction) {
+      const target = index + direction;
+      if (target < 0 || target >= this.document.params.length) return;
+      const params = [...this.document.params];
+      [params[index], params[target]] = [params[target], params[index]];
+      this.document.params = params;
+    },
+    normalizeParameter(param) {
+      const field = this.fieldFor(param.key);
+      if (field?.normalize) param.value = normalizeValue(param.value, field.normalize);
+    },
+    replaceParameter(params, key, value) {
+      const next = deepCopy(params);
+      const first = next.find((param) => param.key === key);
+      if (first) first.value = value;
+      else next.push(blankParameter(key, value));
+      return next;
+    },
     async copyUrl() {
       if (this.errors.length) return this.notify('必須項目を確認してください。', 'error');
-      try { await navigator.clipboard.writeText(this.outputUrl); this.copied = true; this.notify('URLをクリップボードにコピーしました。'); }
+      try { await navigator.clipboard.writeText(this.outputUrl); this.notify('URLをクリップボードにコピーしました。'); }
       catch (_) { this.notify('コピーに失敗しました。URLを選択してコピーしてください。', 'error'); }
     },
-    saveRecord() {
+    newDocument() { this.document = blankDocument(); this.pasteUrl = ''; this.message = ''; this.activeTab = 'builder'; },
+    saveDocument() {
       if (this.errors.length) return this.notify('必須項目を確認してから保存してください。', 'error');
-      const record = { id: createId(), createdAt: new Date().toISOString(), form: JSON.parse(JSON.stringify(this.form)), outputUrl: this.outputUrl };
-      this.records.unshift(record);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.records));
-      this.notify('パラメータを保存しました。');
+      const now = new Date().toISOString();
+      const snapshot = deepCopy({ ...this.document, title: this.document.title.trim() || new URL(this.document.baseUrl).hostname, updatedAt: now });
+      if (!snapshot.id) { snapshot.id = createId(); snapshot.createdAt = now; this.documents.unshift(snapshot); }
+      else { const index = this.documents.findIndex((item) => item.id === snapshot.id); if (index >= 0) this.documents.splice(index, 1, snapshot); else this.documents.unshift(snapshot); }
+      this.document = deepCopy(snapshot);
+      writeStorage(DOCUMENTS_KEY, this.documents);
+      this.notify('この端末に保存しました。ログインなしで再利用できます。');
     },
-    reuseRecord(record) { this.form = { ...emptyForm(), ...record.form }; this.copied = false; this.notify('保存した設定を読み込みました。'); window.scrollTo({ top: 0, behavior: 'smooth' }); },
-    deleteRecord(id) { this.records = this.records.filter((record) => record.id !== id); localStorage.setItem(STORAGE_KEY, JSON.stringify(this.records)); this.notify('保存データを削除しました。'); },
-    clearRecords() {
-      if (!this.records.length || !window.confirm('保存済みの設定をすべて削除します。よろしいですか？')) return;
-      this.records = []; localStorage.removeItem(STORAGE_KEY); this.notify('保存データをすべて削除しました。');
+    openDocument(item) { this.document = deepCopy(item); this.pasteUrl = buildUrl(item); this.activeTab = 'builder'; window.scrollTo({ top: 0, behavior: 'smooth' }); this.notify('保存したURLを読み込みました。'); },
+    deleteDocument(id) { this.documents = this.documents.filter((item) => item.id !== id); writeStorage(DOCUMENTS_KEY, this.documents); this.notify('保存したURLを削除しました。'); },
+    clearDocuments() {
+      if (!this.documents.length || !window.confirm('この端末に保存したURLをすべて削除します。よろしいですか？')) return;
+      this.documents = []; writeStorage(DOCUMENTS_KEY, this.documents); this.notify('保存済みURLをすべて削除しました。');
     },
-    resetForm() { this.form = emptyForm(); this.copied = false; this.message = ''; },
-    exportCsv() {
-      if (!this.records.length) return this.notify('出力する保存データがありません。', 'error');
-      const header = ['保存名', '作成日時', 'URL', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'utm_id', 'utm_source_platform'];
-      const rows = this.records.map((record) => [record.form.name, record.createdAt, record.outputUrl || buildUrl(record.form), record.form.source, record.form.medium, record.form.campaign, record.form.content, record.form.term, record.form.campaignId, record.form.sourcePlatform]);
-      const csv = [header, ...rows].map((row) => row.map((value) => `"${String(value || '').replace(/"/g, '""')}"`).join(',')).join('\n');
-      const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' })); link.download = `utm-parameters-${new Date().toISOString().slice(0, 10)}.csv`; link.click(); URL.revokeObjectURL(link.href); this.notify('CSVをダウンロードしました。');
+    exportDocumentsCsv() {
+      if (!this.documents.length) return this.notify('出力する保存URLがありません。', 'error');
+      const rows = [['タイトル', 'プロファイル', 'URL', 'ノート', '更新日時'], ...this.documents.map((item) => [item.title, this.profileNameFor(item.profileId), buildUrl(item), item.note, item.updatedAt])];
+      download(`url-parameter-library-${new Date().toISOString().slice(0, 10)}.csv`, `\uFEFF${csv(rows)}`, 'text/csv;charset=utf-8');
+      this.notify('ライブラリをCSVで出力しました。');
+    },
+    exportBackup() {
+      download(`url-parameter-studio-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ version: 1, documents: this.documents, profiles: this.customProfiles }, null, 2), 'application/json');
+      this.notify('バックアップをダウンロードしました。');
+    },
+    selectBackup() { this.$refs.backupFile.click(); },
+    importBackup(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const backup = JSON.parse(reader.result);
+          if (!Array.isArray(backup.documents) || !Array.isArray(backup.profiles)) throw new Error();
+          if (!window.confirm('現在のローカル保存データに、バックアップの内容を追加します。よろしいですか？')) return;
+          this.documents = [...backup.documents.map((item) => ({ ...item, id: createId() })), ...this.documents];
+          this.customProfiles = [...backup.profiles.map((item) => ({ ...item, id: `local-${createId()}` })), ...this.customProfiles];
+          writeStorage(DOCUMENTS_KEY, this.documents); writeStorage(PROFILES_KEY, this.customProfiles);
+          this.notify('バックアップを読み込みました。');
+        } catch (_) { this.notify('バックアップの形式を確認できませんでした。', 'error'); }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    },
+    profileNameFor(id) { return this.profiles.find((profile) => profile.id === id)?.name || '不明なプロファイル'; },
+    saveCustomProfile() {
+      const name = this.profileName.trim();
+      const fields = this.document.params.filter((param) => param.key.trim()).map((param) => ({ key: param.key.trim(), label: param.key.trim(), required: false }));
+      if (!name) return this.notify('プロファイル名を入力してください。', 'error');
+      if (!fields.length) return this.notify('プロファイルに含めるパラメータを1つ以上追加してください。', 'error');
+      const profile = { id: `local-${createId()}`, name, description: 'この端末で作成したカスタムプロファイルです。', fields };
+      this.customProfiles.unshift(profile); writeStorage(PROFILES_KEY, this.customProfiles); this.profileName = ''; this.notify('ローカルプロファイルを保存しました。');
+    },
+    updateCustomProfile(profile) {
+      const fields = this.document.params.filter((param) => param.key.trim()).map((param) => ({ key: param.key.trim(), label: param.key.trim(), required: false }));
+      if (!fields.length) return this.notify('更新するパラメータを1つ以上追加してください。', 'error');
+      this.customProfiles = this.customProfiles.map((item) => item.id === profile.id ? { ...item, fields } : item);
+      writeStorage(PROFILES_KEY, this.customProfiles); this.notify('現在のパラメータ構成でプロファイルを更新しました。');
+    },
+    deleteCustomProfile(id) {
+      this.customProfiles = this.customProfiles.filter((profile) => profile.id !== id); writeStorage(PROFILES_KEY, this.customProfiles);
+      if (this.document.profileId === id) this.document.profileId = 'generic';
+      this.notify('ローカルプロファイルを削除しました。');
+    },
+    useProfile(profile) { this.document.profileId = profile.id; this.applyProfile(); this.activeTab = 'builder'; },
+    addAxis() { this.matrixAxes.push({ id: createId(), key: '', values: '' }); },
+    removeAxis(id) { this.matrixAxes = this.matrixAxes.filter((axis) => axis.id !== id); },
+    exportMatrix() {
+      if (!this.matrixResults.length) return this.notify('生成できる組み合わせがありません。URLと軸を入力してください。', 'error');
+      const rows = [['条件', 'URL'], ...this.matrixResults.map((item) => [item.label, item.url])];
+      download(`url-matrix-${new Date().toISOString().slice(0, 10)}.csv`, `\uFEFF${csv(rows)}`, 'text/csv;charset=utf-8');
+      this.notify(`${this.matrixResults.length}件のURLをCSVで出力しました。`);
     }
   },
   template: `
-    <main class="container">
-      <header class="hero"><p class="eyebrow">GA4 CAMPAIGN URL BUILDER</p><h1>URLパラメータ作成ツール</h1><p>計測ルールに沿ったUTM付きURLを、迷わず正確に作成・保存できます。</p></header>
-      <section class="output-panel" aria-labelledby="output-title"><div class="section-heading"><div><p class="eyebrow">PREVIEW</p><h2 id="output-title">生成されるURL</h2></div><span class="status" :class="messageType" v-if="message" role="status">{{ message }}</span></div><output class="url-output" :class="{ empty: !outputUrl }">{{ outputUrl || '必須項目を入力すると、ここにURLが表示されます。' }}</output><div class="actions"><button class="primary" type="button" @click="copyUrl" :disabled="!outputUrl">{{ copied ? 'コピー済み' : 'URLをコピー' }}</button><button type="button" @click="saveRecord">設定を保存</button><button class="quiet" type="button" @click="resetForm">入力をリセット</button></div></section>
-      <section class="form-panel" aria-labelledby="form-title"><div class="section-heading"><div><p class="eyebrow">CREATE</p><h2 id="form-title">計測URLを作成</h2></div><p class="required-note">* は必須項目です</p></div><div class="field preset-field"><label for="preset">媒体テンプレート</label><select id="preset" v-model="form.preset" @change="applyPreset"><option v-for="preset in PRESETS" :key="preset.label" :value="preset.label">{{ preset.label }}</option></select><p>よく使うsource・mediumをまとめて入力します。</p></div><div class="field wide"><label for="url">遷移先URL *</label><input id="url" v-model="form.url" type="url" inputmode="url" placeholder="https://example.com/service?plan=standard#contact"><p>既存のクエリやハッシュは保ったままUTMを追加します。</p></div>
-        <div class="field-grid">
-          <div class="field"><label for="source">utm_source（参照元）*</label><input id="source" v-model="form.source" list="source-options" placeholder="newsletter"><datalist id="source-options"><option v-for="option in SOURCE_OPTIONS" :key="option" :value="option"></option></datalist><p>例: newsletter, google, instagram</p></div>
-          <div class="field"><label for="medium">utm_medium（メディア）*</label><input id="medium" v-model="form.medium" list="medium-options" placeholder="email"><datalist id="medium-options"><option v-for="option in MEDIUM_OPTIONS" :key="option" :value="option"></option></datalist><p>例: email, paid_social, cpc</p></div>
-          <div class="field"><label for="campaign">utm_campaign（キャンペーン名）*</label><input id="campaign" v-model="form.campaign" placeholder="autumn_sale"><p>施策を一意に表す、統一した名称を使います。</p></div>
-          <div class="field"><label for="content">utm_content（クリエイティブ）</label><input id="content" v-model="form.content" placeholder="hero_banner"><p>同一施策内の広告素材・CTAを区別します。</p></div>
-          <div class="field"><label for="term">utm_term（キーワード）</label><input id="term" v-model="form.term" placeholder="marketing_automation"><p>主に検索広告のキーワード用です。</p></div>
-          <div class="field"><label for="campaignId">utm_id（キャンペーンID）</label><input id="campaignId" v-model="form.campaignId" placeholder="2026_autumn_01"><p>外部データと結合するための識別子です。</p></div>
-          <div class="field"><label for="sourcePlatform">utm_source_platform</label><select id="sourcePlatform" v-model="form.sourcePlatform"><option v-for="option in PLATFORM_OPTIONS" :key="option" :value="option">{{ option || '選択しない' }}</option></select><p>広告配信プラットフォームを示します。</p></div>
-          <div class="field"><label for="name">保存名</label><input id="name" v-model="form.name" placeholder="2026秋セール メール配信"><p>保存済み設定を見つけやすくするための名前です。</p></div>
-        </div><div v-if="errors.length" class="notice error" role="alert"><strong>入力を確認してください</strong><ul><li v-for="error in errors" :key="error">{{ error }}</li></ul></div><div v-if="warnings.length" class="notice warning"><strong>命名のヒント</strong><ul><li v-for="warning in warnings" :key="warning">{{ warning }}</li></ul></div></section>
-      <section class="saved-panel" aria-labelledby="saved-title"><div class="section-heading"><div><p class="eyebrow">LIBRARY</p><h2 id="saved-title">保存済みの設定</h2></div><div class="section-actions"><button type="button" class="quiet" @click="exportCsv">CSV出力</button><button type="button" class="danger" @click="clearRecords">すべて削除</button></div></div><p v-if="!records.length" class="empty-state">まだ保存された設定はありません。作成したURLを「設定を保存」から登録できます。</p><ul v-else class="record-list"><li v-for="record in records" :key="record.id" class="record"><div><h3>{{ record.form.name || record.form.campaign }}</h3><p class="record-meta">{{ new Date(record.createdAt).toLocaleString('ja-JP') }}</p><code>{{ record.outputUrl || buildUrl(record.form) }}</code></div><div class="record-actions"><button type="button" @click="reuseRecord(record)">再利用</button><button type="button" class="danger" @click="deleteRecord(record.id)">削除</button></div></li></ul></section>
+    <main class="app-shell">
+      <header class="hero"><div><p class="eyebrow">URL PARAMETER STUDIO</p><h1>計測も、独自ルールも。<br>URLを、正しく組み立てる。</h1><p>ログイン不要で、解析・編集・保存・出力まで。この端末だけで完結します。</p></div><div class="privacy-card"><strong>匿名で利用中</strong><span>入力内容はこのブラウザ内にのみ保存されます。</span></div></header>
+      <nav class="tabs" aria-label="機能メニュー"><button v-for="tab in [{id:'builder',label:'URLを作る'},{id:'library',label:'ライブラリ'},{id:'matrix',label:'一括生成'},{id:'profiles',label:'プロファイル'}]" :key="tab.id" type="button" :class="{active:activeTab===tab.id}" @click="activeTab=tab.id">{{ tab.label }}</button></nav>
+
+      <section v-if="activeTab==='builder'" class="workspace">
+        <div class="builder-main">
+          <section class="panel intake"><div class="section-heading"><div><p class="eyebrow">01 / INSPECT</p><h2>URLを貼り付けて始める</h2></div><button type="button" class="quiet" @click="newDocument">新規作成</button></div><div class="paste-row"><input v-model="pasteUrl" type="url" inputmode="url" placeholder="https://example.com/page?existing=value#section" aria-label="解析するURL"><button type="button" @click="parsePastedUrl">解析する</button></div><p class="hint">既存のクエリ・ハッシュを分解し、未知のパラメータも残したまま編集できます。</p></section>
+          <section class="panel"><div class="section-heading"><div><p class="eyebrow">02 / DESIGN</p><h2>パラメータを設計</h2></div><span class="profile-pill">{{ activeProfile.name }}</span></div>
+            <div class="field-grid compact"><div class="field"><label for="profile">プロファイル</label><select id="profile" v-model="document.profileId" @change="changeProfile"><option v-for="profile in profiles" :key="profile.id" :value="profile.id">{{ profile.name }}</option></select><p>{{ activeProfile.description }}</p></div><div class="field"><label for="title">保存名</label><input id="title" v-model="document.title" placeholder="例: 秋セール メール配信"></div></div>
+            <div class="field wide"><label for="base-url">遷移先URL</label><input id="base-url" v-model="document.baseUrl" type="url" inputmode="url" placeholder="https://example.com/service"><p v-if="document.hash">ハッシュ: {{ document.hash }}</p></div>
+            <div class="parameter-head"><span>パラメータ</span><span>値</span><span aria-hidden="true"></span></div>
+            <div v-for="(param,index) in document.params" :key="param.id" class="parameter-row"><div><label class="sr-only" :for="'key-'+param.id">パラメータ名</label><input :id="'key-'+param.id" v-model="param.key" placeholder="キー"><small>{{ displayLabel(param) }}</small></div><div><label class="sr-only" :for="'value-'+param.id">値</label><input :id="'value-'+param.id" v-model="param.value" @change="normalizeParameter(param)" :list="fieldFor(param.key)?.choices ? 'choices-'+param.id : null" placeholder="値"><datalist v-if="fieldFor(param.key)?.choices" :id="'choices-'+param.id"><option v-for="choice in fieldFor(param.key).choices" :key="choice" :value="choice"></option></datalist></div><div class="row-actions"><button type="button" class="icon-button" :disabled="index===0" @click="moveParameter(index,-1)" aria-label="上へ移動">↑</button><button type="button" class="icon-button" :disabled="index===document.params.length-1" @click="moveParameter(index,1)" aria-label="下へ移動">↓</button><button type="button" class="icon-button danger" @click="removeParameter(param.id)" aria-label="削除">×</button></div></div>
+            <button type="button" class="add-button" @click="addParameter">＋ パラメータを追加</button>
+            <div class="field note-field"><label for="note">ノート</label><textarea id="note" v-model="document.note" rows="3" placeholder="用途、掲載場所、担当者、配信期限などを残せます。"></textarea></div>
+          </section>
+        </div>
+        <aside class="preview-column"><section class="panel sticky"><p class="eyebrow">03 / REVIEW</p><h2>完成URL</h2><output class="url-output" :class="{empty:!outputUrl}">{{ outputUrl || '遷移先URLを入力するとプレビューが表示されます。' }}</output><div class="actions"><button type="button" class="primary" :disabled="!outputUrl || errors.length" @click="copyUrl">URLをコピー</button><button type="button" @click="saveDocument">この端末に保存</button></div><p class="local-note">クラウド保存・共有は、次のログイン対応フェーズで追加予定です。</p><div v-if="errors.length" class="notice error" role="alert"><strong>保存・コピー前に確認</strong><ul><li v-for="error in errors" :key="error">{{ error }}</li></ul></div><div v-if="warnings.length" class="notice warning"><strong>品質チェック</strong><ul><li v-for="warning in warnings" :key="warning">{{ warning }}</li></ul></div><p v-if="message" class="message" :class="messageType" role="status">{{ message }}</p></section></aside>
+      </section>
+
+      <section v-else-if="activeTab==='library'" class="panel full-panel"><div class="section-heading"><div><p class="eyebrow">LOCAL LIBRARY</p><h2>この端末に保存したURL</h2><p class="hint">ログインなしでも検索・編集・バックアップできます。</p></div><div class="section-actions"><button type="button" @click="exportDocumentsCsv">CSV出力</button><button type="button" @click="exportBackup">バックアップ</button><button type="button" @click="selectBackup">復元</button><button type="button" class="danger" @click="clearDocuments">すべて削除</button><input ref="backupFile" class="sr-only" type="file" accept="application/json" @change="importBackup"></div></div><input v-model="search" class="search" type="search" placeholder="保存名、ノート、URLで検索"><p v-if="!filteredDocuments.length" class="empty-state">保存されたURLはありません。ビルダーで作成後、「この端末に保存」を選んでください。</p><ul v-else class="document-list"><li v-for="item in filteredDocuments" :key="item.id" class="document-card"><div><p class="document-profile">{{ profileNameFor(item.profileId) }}</p><h3>{{ item.title }}</h3><p v-if="item.note" class="document-note">{{ item.note }}</p><code>{{ buildUrl(item) }}</code><p class="timestamp">更新: {{ new Date(item.updatedAt).toLocaleString('ja-JP') }}</p></div><div class="record-actions"><button type="button" @click="openDocument(item)">編集する</button><button type="button" class="danger" @click="deleteDocument(item.id)">削除</button></div></li></ul></section>
+
+      <section v-else-if="activeTab==='matrix'" class="panel full-panel"><div class="section-heading"><div><p class="eyebrow">CAMPAIGN MATRIX</p><h2>組み合わせて、一括生成</h2><p class="hint">現在のURLをベースに、媒体・クリエイティブなどの組み合わせを最大200件作れます。</p></div><button type="button" class="primary" @click="exportMatrix">CSVを出力</button></div><div class="matrix-grid"><div v-for="axis in matrixAxes" :key="axis.id" class="axis-card"><label>置き換えるキー<input v-model="axis.key" placeholder="utm_content"></label><label>値（改行またはカンマ区切り）<textarea v-model="axis.values" rows="5" placeholder="hero_cta\nfooter_cta"></textarea></label><button type="button" class="danger text-button" @click="removeAxis(axis.id)">この軸を削除</button></div><button type="button" class="add-axis" @click="addAxis">＋ 軸を追加</button></div><p v-if="matrixResults.length >= 200" class="notice warning">組み合わせが多いため、先頭200件のみ表示・出力します。</p><p v-if="!matrixResults.length" class="empty-state">ビルダーで遷移先URLを入力し、少なくとも1つの軸に値を指定してください。</p><ol v-else class="matrix-results"><li v-for="item in matrixResults" :key="item.url"><strong>{{ item.label }}</strong><code>{{ item.url }}</code></li></ol></section>
+
+      <section v-else class="panel full-panel"><div class="section-heading"><div><p class="eyebrow">LOCAL PROFILES</p><h2>自分用のルールを保存</h2><p class="hint">ログインなしでも、この端末で使う独自パラメータ構成を保存できます。</p></div></div><div class="profile-create"><input v-model="profileName" placeholder="例: 自社メール計測ルール"><button type="button" class="primary" @click="saveCustomProfile">現在の構成を保存</button></div><p class="hint">ビルダーにあるパラメータ名を、そのままプロファイルの項目として保存します。値は保存されません。</p><p v-if="!customProfiles.length" class="empty-state">まだローカルプロファイルはありません。ビルダーで項目を整えてから保存してください。</p><ul v-else class="profile-list"><li v-for="profile in customProfiles" :key="profile.id"><div><h3>{{ profile.name }}</h3><p>{{ profile.fields.map(field => field.key).join(', ') }}</p></div><div class="record-actions"><button type="button" @click="useProfile(profile)">使う</button><button type="button" @click="updateCustomProfile(profile)">現在の構成で更新</button><button type="button" class="danger" @click="deleteCustomProfile(profile.id)">削除</button></div></li></ul></section>
     </main>`
 });
+
 app.mount('#app');
