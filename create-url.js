@@ -344,7 +344,7 @@ const app = Vue.createApp({
   },
   template: `
     <main class="app-shell">
-      <header class="hero"><div><div class="locale-switch" aria-label="Language"><button type="button" :class="{active:locale==='ja'}" @click="setLocale('ja')">日本語</button><button type="button" :class="{active:locale==='en'}" @click="setLocale('en')">English</button></div><p class="eyebrow">URL PARAMETER STUDIO</p><h1 v-html="t('hero')"></h1><p>{{ t('hero_sub') }}</p></div></header>
+      <header class="hero"><div><div class="locale-switch" aria-label="Language"><button type="button" :class="{active:locale==='ja'}" @click="setLocale('ja')">日本語</button><button type="button" :class="{active:locale==='en'}" @click="setLocale('en')">English</button></div><h1 v-html="t('hero')"></h1><p>{{ t('hero_sub') }}</p></div></header>
       <nav class="tabs" :aria-label="t('builder')"><button v-for="tab in tabs" :key="tab.id" type="button" :class="{active:activeTab===tab.id}" @click="activeTab=tab.id">{{ tab.label }}</button></nav>
 
       <section v-if="activeTab==='builder'" class="workspace">
