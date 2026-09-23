@@ -60,3 +60,7 @@ https://example.com/service?plan=standard&utm_source=newsletter&utm_medium=email
 ## 注意
 
 UTMの命名規則は組織のレポート設計に合わせて運用してください。Google Adsなど、連携・自動タグ設定済みの広告媒体では、手動UTM付与の方針を事前に確認することをおすすめします。
+
+## 次期版の設計
+
+GA4に限定しない汎用URLパラメータツールへの移行、匿名利用とログイン機能の境界、組織カスタマイズ・共有機能の要件は、[プロダクト設計書](./docs/product-design.md)にまとめています。
