@@ -201,6 +201,19 @@ const app = Vue.createApp({
       catch (_) { this.notify('コピーに失敗しました。URLを選択してコピーしてください。', 'error'); }
     },
     newDocument() { this.document = blankDocument(); this.pasteUrl = ''; this.message = ''; this.activeTab = 'builder'; },
+    startWithProfile(profileId) {
+      if ((this.document.baseUrl || this.document.params.length) && !window.confirm('現在の入力内容をリセットして、新しく作成します。よろしいですか？')) return;
+      this.document = blankDocument();
+      this.document.profileId = profileId;
+      this.pasteUrl = '';
+      if (profileId === 'generic') this.document.params = [blankParameter()];
+      else this.applyProfile();
+      this.notify(profileId === 'generic' ? '自由入力モードで開始しました。キーと値を入力してください。' : `${this.activeProfile.name}の入力欄を用意しました。`);
+    },
+    focusPaste() {
+      this.$nextTick(() => document.getElementById('paste-url')?.focus());
+    },
+    openLibrary() { this.activeTab = 'library'; },
     saveDocument() {
       if (this.errors.length) return this.notify('必須項目を確認してから保存してください。', 'error');
       const now = new Date().toISOString();
@@ -278,18 +291,19 @@ const app = Vue.createApp({
   },
   template: `
     <main class="app-shell">
-      <header class="hero"><div><p class="eyebrow">URL PARAMETER STUDIO</p><h1>計測も、独自ルールも。<br>URLを、正しく組み立てる。</h1><p>ログイン不要で、解析・編集・保存・出力まで。この端末だけで完結します。</p></div><div class="privacy-card"><strong>匿名で利用中</strong><span>入力内容はこのブラウザ内にのみ保存されます。</span></div></header>
+      <header class="hero"><div><p class="eyebrow">URL PARAMETER STUDIO</p><h1>URLパラメータを、<br>迷わず作る。</h1><p>GA4・Adobe・独自仕様に対応。ログインなしで作成、解析、保存、出力まで使えます。</p></div><div class="privacy-card"><strong>ログイン不要で使えます</strong><span>入力内容はこのブラウザ内にのみ保存されます。</span></div></header>
       <nav class="tabs" aria-label="機能メニュー"><button v-for="tab in [{id:'builder',label:'URLを作る'},{id:'library',label:'ライブラリ'},{id:'matrix',label:'一括生成'},{id:'profiles',label:'プロファイル'}]" :key="tab.id" type="button" :class="{active:activeTab===tab.id}" @click="activeTab=tab.id">{{ tab.label }}</button></nav>
 
       <section v-if="activeTab==='builder'" class="workspace">
         <div class="builder-main">
-          <section class="panel intake"><div class="section-heading"><div><p class="eyebrow">01 / INSPECT</p><h2>URLを貼り付けて始める</h2></div><button type="button" class="quiet" @click="newDocument">新規作成</button></div><div class="paste-row"><input v-model="pasteUrl" type="url" inputmode="url" placeholder="https://example.com/page?existing=value#section" aria-label="解析するURL"><button type="button" @click="parsePastedUrl">解析する</button></div><p class="hint">既存のクエリ・ハッシュを分解し、未知のパラメータも残したまま編集できます。</p></section>
+          <section class="start-panel" aria-labelledby="start-title"><div><p class="eyebrow">START HERE</p><h2 id="start-title">何をしたいですか？</h2><p>目的を選ぶだけで、必要な入力欄を準備します。</p></div><div class="start-grid"><button type="button" class="start-card primary-start" @click="startWithProfile('generic')"><strong>ゼロから作る</strong><span>自分でキーと値を追加する</span></button><button type="button" class="start-card" @click="startWithProfile('ga4')"><strong>GA4のURLを作る</strong><span>UTMの入力欄を用意する</span></button><button type="button" class="start-card" @click="startWithProfile('adobe')"><strong>Adobe用に作る</strong><span>Tracking Codeから始める</span></button><button type="button" class="start-card" @click="focusPaste"><strong>既存URLを編集する</strong><span>貼り付けてパラメータを解析</span></button></div><button type="button" class="library-link" @click="openLibrary">保存済みのURLを編集する →</button></section>
+          <section class="panel intake"><div class="section-heading"><div><p class="eyebrow">URL INSPECTOR</p><h2>既存URLを編集する場合</h2></div><button type="button" class="quiet" @click="newDocument">入力をリセット</button></div><div class="paste-row"><input id="paste-url" v-model="pasteUrl" type="url" inputmode="url" placeholder="https://example.com/page?existing=value#section" aria-label="解析するURL"><button type="button" @click="parsePastedUrl">貼り付けたURLを解析</button></div><p class="hint">既存のクエリ・ハッシュを分解し、未知のパラメータも残したまま編集できます。</p></section>
           <section class="panel"><div class="section-heading"><div><p class="eyebrow">02 / DESIGN</p><h2>パラメータを設計</h2></div><span class="profile-pill">{{ activeProfile.name }}</span></div>
             <div class="field-grid compact"><div class="field"><label for="profile">プロファイル</label><select id="profile" v-model="document.profileId" @change="changeProfile"><option v-for="profile in profiles" :key="profile.id" :value="profile.id">{{ profile.name }}</option></select><p>{{ activeProfile.description }}</p></div><div class="field"><label for="title">保存名</label><input id="title" v-model="document.title" placeholder="例: 秋セール メール配信"></div></div>
             <div class="field wide"><label for="base-url">遷移先URL</label><input id="base-url" v-model="document.baseUrl" type="url" inputmode="url" placeholder="https://example.com/service"><p v-if="document.hash">ハッシュ: {{ document.hash }}</p></div>
             <div class="parameter-head"><span>パラメータ</span><span>値</span><span aria-hidden="true"></span></div>
             <div v-for="(param,index) in document.params" :key="param.id" class="parameter-row"><div><label class="sr-only" :for="'key-'+param.id">パラメータ名</label><input :id="'key-'+param.id" v-model="param.key" placeholder="キー"><small>{{ displayLabel(param) }}</small></div><div><label class="sr-only" :for="'value-'+param.id">値</label><input :id="'value-'+param.id" v-model="param.value" @change="normalizeParameter(param)" :list="fieldFor(param.key)?.choices ? 'choices-'+param.id : null" placeholder="値"><datalist v-if="fieldFor(param.key)?.choices" :id="'choices-'+param.id"><option v-for="choice in fieldFor(param.key).choices" :key="choice" :value="choice"></option></datalist></div><div class="row-actions"><button type="button" class="icon-button" :disabled="index===0" @click="moveParameter(index,-1)" aria-label="上へ移動">↑</button><button type="button" class="icon-button" :disabled="index===document.params.length-1" @click="moveParameter(index,1)" aria-label="下へ移動">↓</button><button type="button" class="icon-button danger" @click="removeParameter(param.id)" aria-label="削除">×</button></div></div>
-            <button type="button" class="add-button" @click="addParameter">＋ パラメータを追加</button>
+            <div v-if="!document.params.length" class="parameter-empty"><strong>まだパラメータはありません</strong><span>「パラメータを追加」から、たとえば <code>source</code> と <code>newsletter</code> のように自由に入力できます。</span></div><button type="button" class="add-button" @click="addParameter">＋ パラメータを追加</button>
             <div class="field note-field"><label for="note">ノート</label><textarea id="note" v-model="document.note" rows="3" placeholder="用途、掲載場所、担当者、配信期限などを残せます。"></textarea></div>
           </section>
         </div>
