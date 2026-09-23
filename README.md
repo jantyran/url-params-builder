@@ -32,18 +32,15 @@ https://example.com/service?utm_source=newsletter&utm_medium=email&utm_campaign=
 
 ## ローカルで動かす
 
-依存パッケージやビルドは不要です。`index.html` をブラウザで開くか、静的HTTPサーバーで配信します。URLコピー機能はHTTPSまたは `localhost` での利用を推奨します。
-
-## 開発に参加する
-
-HTML、CSS、JavaScriptだけで構成されています。変更後は以下を確認してください。
+依存パッケージやビルドは不要です。リポジトリを取得後、以下を実行します。
 
 ```bash
-node --check create-url.js
-git diff --check
+git clone https://github.com/jantyran/url-params-builder.git
+cd url-params-builder
+python3 -m http.server 8000
 ```
 
-`main` への変更はGitHub ActionsでGitHub Pagesへ公開されます。公開URLはREADME先頭のリンクです。
+ブラウザで [http://localhost:8000](http://localhost:8000) を開きます。終了する場合はターミナルで `Ctrl + C` を押します。
 
 ## 参考資料
 
