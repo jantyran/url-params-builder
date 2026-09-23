@@ -1,25 +1,15 @@
 <!doctype html>
-<html>
+<html lang="ja">
 <head>
-    
-    <meta charset="utf-8"/>
-    <script src="https://unpkg.com/vue@next"></script>
-
-    <!-- cookie -->
-    <script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
-
-    <link rel="stylesheet" href="./style.css">
-
-    
-    <title>URLパラメータ作成ツール</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="GA4向けのUTMパラメータ付きURLを作成、保存、CSV出力できるブラウザ完結型ツールです。">
+  <title>URLパラメータ作成ツール</title>
+  <link rel="stylesheet" href="./style.css">
+  <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js" defer></script>
+  <script src="./create-url.js" defer></script>
 </head>
-	<body>
-        <div id="app">
-            <create-param></create-param>
-        </div>
-        <div id="new-footer"></div>
-
-		<script src="./create-url.js"></script>
-
-	</body>
+<body>
+  <div id="app"></div>
+</body>
 </html>
