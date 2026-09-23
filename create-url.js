@@ -95,6 +95,7 @@ const app = Vue.createApp({
       pasteUrl: '',
       message: '',
       messageType: 'success',
+      showSaveChoices: false,
       search: '',
       profileName: '',
       matrixAxes: [
@@ -200,6 +201,14 @@ const app = Vue.createApp({
       try { await navigator.clipboard.writeText(this.outputUrl); this.notify('URLをクリップボードにコピーしました。'); }
       catch (_) { this.notify('コピーに失敗しました。URLを選択してコピーしてください。', 'error'); }
     },
+    openSaveChoices() {
+      if (this.errors.length) return this.notify('必須項目を確認してから保存してください。', 'error');
+      this.showSaveChoices = true;
+    },
+    saveToAccount() {
+      this.showSaveChoices = false;
+      this.notify('アカウントでの保存・共有は現在準備中です。今は「この端末に保存」を利用できます。');
+    },
     newDocument() { this.document = blankDocument(); this.pasteUrl = ''; this.message = ''; this.activeTab = 'builder'; },
     startWithProfile(profileId) {
       if ((this.document.baseUrl || this.document.params.length) && !window.confirm('現在の入力内容をリセットして、新しく作成します。よろしいですか？')) return;
@@ -222,7 +231,8 @@ const app = Vue.createApp({
       else { const index = this.documents.findIndex((item) => item.id === snapshot.id); if (index >= 0) this.documents.splice(index, 1, snapshot); else this.documents.unshift(snapshot); }
       this.document = deepCopy(snapshot);
       writeStorage(DOCUMENTS_KEY, this.documents);
-      this.notify('この端末に保存しました。ログインなしで再利用できます。');
+      this.showSaveChoices = false;
+      this.notify('保存しました。保存済みのURLは「ライブラリ」から編集できます。');
     },
     openDocument(item) { this.document = deepCopy(item); this.pasteUrl = buildUrl(item); this.activeTab = 'builder'; window.scrollTo({ top: 0, behavior: 'smooth' }); this.notify('保存したURLを読み込みました。'); },
     deleteDocument(id) { this.documents = this.documents.filter((item) => item.id !== id); writeStorage(DOCUMENTS_KEY, this.documents); this.notify('保存したURLを削除しました。'); },
@@ -291,7 +301,7 @@ const app = Vue.createApp({
   },
   template: `
     <main class="app-shell">
-      <header class="hero"><div><p class="eyebrow">URL PARAMETER STUDIO</p><h1>URLパラメータを、<br>迷わず作る。</h1><p>GA4・Adobe・独自仕様に対応。ログインなしで作成、解析、保存、出力まで使えます。</p></div><div class="privacy-card"><strong>ログイン不要で使えます</strong><span>入力内容はこのブラウザ内にのみ保存されます。</span></div></header>
+      <header class="hero"><div><p class="eyebrow">URL PARAMETER STUDIO</p><h1>URLパラメータを、<br>迷わず作る。</h1><p>GA4・Adobe・独自仕様に対応。ログインなしで、URLの作成・解析・コピーをすぐに使えます。</p></div><div class="privacy-card"><strong>アカウントなしで始められます</strong><span>保存する時だけ、保存方法を選べます。</span></div></header>
       <nav class="tabs" aria-label="機能メニュー"><button v-for="tab in [{id:'builder',label:'URLを作る'},{id:'library',label:'ライブラリ'},{id:'matrix',label:'一括生成'},{id:'profiles',label:'プロファイル'}]" :key="tab.id" type="button" :class="{active:activeTab===tab.id}" @click="activeTab=tab.id">{{ tab.label }}</button></nav>
 
       <section v-if="activeTab==='builder'" class="workspace">
@@ -307,14 +317,15 @@ const app = Vue.createApp({
             <div class="field note-field"><label for="note">ノート</label><textarea id="note" v-model="document.note" rows="3" placeholder="用途、掲載場所、担当者、配信期限などを残せます。"></textarea></div>
           </section>
         </div>
-        <aside class="preview-column"><section class="panel sticky"><p class="eyebrow">03 / REVIEW</p><h2>完成URL</h2><output class="url-output" :class="{empty:!outputUrl}">{{ outputUrl || '遷移先URLを入力するとプレビューが表示されます。' }}</output><div class="actions"><button type="button" class="primary" :disabled="!outputUrl || errors.length" @click="copyUrl">URLをコピー</button><button type="button" @click="saveDocument">この端末に保存</button></div><p class="local-note">クラウド保存・共有は、次のログイン対応フェーズで追加予定です。</p><div v-if="errors.length" class="notice error" role="alert"><strong>保存・コピー前に確認</strong><ul><li v-for="error in errors" :key="error">{{ error }}</li></ul></div><div v-if="warnings.length" class="notice warning"><strong>品質チェック</strong><ul><li v-for="warning in warnings" :key="warning">{{ warning }}</li></ul></div><p v-if="message" class="message" :class="messageType" role="status">{{ message }}</p></section></aside>
+        <aside class="preview-column"><section class="panel sticky"><p class="eyebrow">03 / REVIEW</p><h2>完成URL</h2><output class="url-output" :class="{empty:!outputUrl}">{{ outputUrl || '遷移先URLを入力するとプレビューが表示されます。' }}</output><div class="actions"><button type="button" class="primary" :disabled="!outputUrl || errors.length" @click="copyUrl">URLをコピー</button><button type="button" @click="openSaveChoices">保存する</button></div><p class="local-note">保存する場合のみ、保存方法を選べます。</p><div v-if="errors.length" class="notice error" role="alert"><strong>保存・コピー前に確認</strong><ul><li v-for="error in errors" :key="error">{{ error }}</li></ul></div><div v-if="warnings.length" class="notice warning"><strong>品質チェック</strong><ul><li v-for="warning in warnings" :key="warning">{{ warning }}</li></ul></div><p v-if="message" class="message" :class="messageType" role="status">{{ message }}</p></section></aside>
       </section>
 
-      <section v-else-if="activeTab==='library'" class="panel full-panel"><div class="section-heading"><div><p class="eyebrow">LOCAL LIBRARY</p><h2>この端末に保存したURL</h2><p class="hint">ログインなしでも検索・編集・バックアップできます。</p></div><div class="section-actions"><button type="button" @click="exportDocumentsCsv">CSV出力</button><button type="button" @click="exportBackup">バックアップ</button><button type="button" @click="selectBackup">復元</button><button type="button" class="danger" @click="clearDocuments">すべて削除</button><input ref="backupFile" class="sr-only" type="file" accept="application/json" @change="importBackup"></div></div><input v-model="search" class="search" type="search" placeholder="保存名、ノート、URLで検索"><p v-if="!filteredDocuments.length" class="empty-state">保存されたURLはありません。ビルダーで作成後、「この端末に保存」を選んでください。</p><ul v-else class="document-list"><li v-for="item in filteredDocuments" :key="item.id" class="document-card"><div><p class="document-profile">{{ profileNameFor(item.profileId) }}</p><h3>{{ item.title }}</h3><p v-if="item.note" class="document-note">{{ item.note }}</p><code>{{ buildUrl(item) }}</code><p class="timestamp">更新: {{ new Date(item.updatedAt).toLocaleString('ja-JP') }}</p></div><div class="record-actions"><button type="button" @click="openDocument(item)">編集する</button><button type="button" class="danger" @click="deleteDocument(item.id)">削除</button></div></li></ul></section>
+      <section v-else-if="activeTab==='library'" class="panel full-panel"><div class="section-heading"><div><p class="eyebrow">SAVED URLS</p><h2>保存したURL</h2><p class="hint">検索、編集、CSV出力、バックアップができます。</p></div><div class="section-actions"><button type="button" @click="exportDocumentsCsv">CSV出力</button><button type="button" @click="exportBackup">バックアップ</button><button type="button" @click="selectBackup">復元</button><button type="button" class="danger" @click="clearDocuments">すべて削除</button><input ref="backupFile" class="sr-only" type="file" accept="application/json" @change="importBackup"></div></div><input v-model="search" class="search" type="search" placeholder="保存名、ノート、URLで検索"><p v-if="!filteredDocuments.length" class="empty-state">保存されたURLはありません。ビルダーで作成後、「保存する」から保存方法を選んでください。</p><ul v-else class="document-list"><li v-for="item in filteredDocuments" :key="item.id" class="document-card"><div><p class="document-profile">{{ profileNameFor(item.profileId) }}</p><h3>{{ item.title }}</h3><p v-if="item.note" class="document-note">{{ item.note }}</p><code>{{ buildUrl(item) }}</code><p class="timestamp">更新: {{ new Date(item.updatedAt).toLocaleString('ja-JP') }}</p></div><div class="record-actions"><button type="button" @click="openDocument(item)">編集する</button><button type="button" class="danger" @click="deleteDocument(item.id)">削除</button></div></li></ul></section>
 
       <section v-else-if="activeTab==='matrix'" class="panel full-panel"><div class="section-heading"><div><p class="eyebrow">CAMPAIGN MATRIX</p><h2>組み合わせて、一括生成</h2><p class="hint">現在のURLをベースに、媒体・クリエイティブなどの組み合わせを最大200件作れます。</p></div><button type="button" class="primary" @click="exportMatrix">CSVを出力</button></div><div class="matrix-grid"><div v-for="axis in matrixAxes" :key="axis.id" class="axis-card"><label>置き換えるキー<input v-model="axis.key" placeholder="utm_content"></label><label>値（改行またはカンマ区切り）<textarea v-model="axis.values" rows="5" placeholder="hero_cta\nfooter_cta"></textarea></label><button type="button" class="danger text-button" @click="removeAxis(axis.id)">この軸を削除</button></div><button type="button" class="add-axis" @click="addAxis">＋ 軸を追加</button></div><p v-if="matrixResults.length >= 200" class="notice warning">組み合わせが多いため、先頭200件のみ表示・出力します。</p><p v-if="!matrixResults.length" class="empty-state">ビルダーで遷移先URLを入力し、少なくとも1つの軸に値を指定してください。</p><ol v-else class="matrix-results"><li v-for="item in matrixResults" :key="item.url"><strong>{{ item.label }}</strong><code>{{ item.url }}</code></li></ol></section>
 
-      <section v-else class="panel full-panel"><div class="section-heading"><div><p class="eyebrow">LOCAL PROFILES</p><h2>自分用のルールを保存</h2><p class="hint">ログインなしでも、この端末で使う独自パラメータ構成を保存できます。</p></div></div><div class="profile-create"><input v-model="profileName" placeholder="例: 自社メール計測ルール"><button type="button" class="primary" @click="saveCustomProfile">現在の構成を保存</button></div><p class="hint">ビルダーにあるパラメータ名を、そのままプロファイルの項目として保存します。値は保存されません。</p><p v-if="!customProfiles.length" class="empty-state">まだローカルプロファイルはありません。ビルダーで項目を整えてから保存してください。</p><ul v-else class="profile-list"><li v-for="profile in customProfiles" :key="profile.id"><div><h3>{{ profile.name }}</h3><p>{{ profile.fields.map(field => field.key).join(', ') }}</p></div><div class="record-actions"><button type="button" @click="useProfile(profile)">使う</button><button type="button" @click="updateCustomProfile(profile)">現在の構成で更新</button><button type="button" class="danger" @click="deleteCustomProfile(profile.id)">削除</button></div></li></ul></section>
+      <section v-else class="panel full-panel"><div class="section-heading"><div><p class="eyebrow">MY PROFILES</p><h2>自分用のルールを保存</h2><p class="hint">よく使う独自パラメータ構成を、次回からすぐ呼び出せます。</p></div></div><div class="profile-create"><input v-model="profileName" placeholder="例: 自社メール計測ルール"><button type="button" class="primary" @click="saveCustomProfile">現在の構成を保存</button></div><p class="hint">ビルダーにあるパラメータ名を、そのままプロファイルの項目として保存します。値は保存されません。</p><p v-if="!customProfiles.length" class="empty-state">まだ自分用のルールはありません。ビルダーで項目を整えてから保存してください。</p><ul v-else class="profile-list"><li v-for="profile in customProfiles" :key="profile.id"><div><h3>{{ profile.name }}</h3><p>{{ profile.fields.map(field => field.key).join(', ') }}</p></div><div class="record-actions"><button type="button" @click="useProfile(profile)">使う</button><button type="button" @click="updateCustomProfile(profile)">現在の構成で更新</button><button type="button" class="danger" @click="deleteCustomProfile(profile.id)">削除</button></div></li></ul></section>
+      <div v-if="showSaveChoices" class="modal-backdrop" role="presentation" @click.self="showSaveChoices=false"><section class="save-dialog" role="dialog" aria-modal="true" aria-labelledby="save-title"><button type="button" class="close-dialog" aria-label="閉じる" @click="showSaveChoices=false">×</button><p class="eyebrow">SAVE URL</p><h2 id="save-title">どこに保存しますか？</h2><p>あとで編集したい場合に、保存方法を選べます。</p><div class="save-options"><button type="button" class="save-option" @click="saveDocument"><strong>この端末に保存</strong><span>アカウントなしで、あとからこの端末で編集できます。</span></button><button type="button" class="save-option account-option" @click="saveToAccount"><strong>アカウントで保存</strong><span>複数端末での利用・共有に対応予定です。現在は準備中です。</span></button></div></section></div>
     </main>`
 });
 
