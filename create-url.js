@@ -9,7 +9,7 @@ const COMMON_MEDIA = ['email', 'social', 'paid_social', 'cpc', 'display', 'refer
 const MESSAGES = {
   ja: {
     builder:'URLを作る', library:'ライブラリ', matrix:'まとめて作る', profiles:'テンプレート',
-    hero:'URLパラメータを、<br>迷わず作る。', hero_sub:'UTM・Tracking Code・独自パラメータに対応。',
+    hero:'URLパラメーターに<br>迷わない。', hero_sub:'UTM・Tracking Code・独自パラメーターに対応。',
     start:'作成', what:'URLを作る', start_hint:'用途別の作成方法',
     scratch:'自由に作る', scratch_hint:'任意のパラメータを追加', web_start:'Webトラッキング', web_hint:'UTMパラメータ', campaign_start:'広告・CRM計測', campaign_hint:'Campaign IDなど', edit_url:'URLを読み込んで編集', edit_hint:'既存URLを貼り付け', open_saved:'保存したURLを編集 →',
     inspector_title:'URLを読み込む', reset:'リセット', parse:'読み込む', parse_hint:'クエリ・ハッシュを保ったまま編集',
