@@ -4,6 +4,8 @@ GA4のUTM、Adobe Analyticsの追跡コード、広告・CRM・社内独自の�
 
 ## できること
 
+画面右上で日本語／Englishを切り替えできます。
+
 - URL貼り付けによる既存クエリ・ハッシュの解析と編集
 - GA4 UTM、Adobe Tracking Code、広告・CRM、任意パラメータのプロファイル
 - 任意のキー・値の追加、並び替え、削除

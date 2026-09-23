@@ -1,32 +1,66 @@
 const DOCUMENTS_KEY = 'url-parameter-studio.documents.v1';
 const PROFILES_KEY = 'url-parameter-studio.profiles.v1';
 const LEGACY_RECORDS_KEY = 'url-params-builder.records.v2';
+const LOCALE_KEY = 'url-parameter-studio.locale.v1';
 
 const COMMON_SOURCES = ['newsletter', 'mailmagazine', 'google', 'yahoo', 'facebook', 'instagram', 'x', 'linkedin', 'qrcode', 'brochure', 'partner'];
 const COMMON_MEDIA = ['email', 'social', 'paid_social', 'cpc', 'display', 'referral', 'affiliate', 'offline'];
 
+const MESSAGES = {
+  ja: {
+    builder:'URLを作る', library:'ライブラリ', matrix:'一括生成', profiles:'プロファイル',
+    hero:'URLパラメータを、<br>迷わず作る。', hero_sub:'GA4・Adobe・独自仕様に対応。',
+    start:'はじめる', what:'何をしたい？', start_hint:'目的を選ぶだけで入力欄を準備する。',
+    scratch:'ゼロから作る', scratch_hint:'キーと値を自由に追加', ga4_start:'GA4のURLを作る', ga4_hint:'UTMの入力欄を用意', adobe_start:'Adobe用に作る', adobe_hint:'Tracking Codeから開始', edit_url:'既存URLを編集', edit_hint:'貼り付けて解析', open_saved:'保存済みのURLを編集 →',
+    inspector:'URLを解析', inspector_title:'既存URLを編集する場合', reset:'入力をリセット', parse:'URLを解析', parse_hint:'既存のクエリ・ハッシュも残して編集できる。',
+    design:'パラメータを設計', profile:'プロファイル', save_name:'保存名', destination:'遷移先URL', hash:'ハッシュ', parameter:'パラメータ', value:'値', key:'キー', note:'ノート', add_param:'＋ パラメータを追加', no_params:'パラメータは未入力', no_params_hint:'キーと値を入力して追加できる。',
+    review:'確認', complete_url:'完成URL', preview_empty:'遷移先URLを入力するとプレビューを表示。', copy:'URLをコピー', save:'保存する', save_hint:'保存方法を選べる。', check_before:'保存・コピー前に確認', quality:'品質チェック',
+    saved_urls:'保存したURL', library_hint:'検索、編集、CSV出力、バックアップ。', export_csv:'CSV出力', backup:'バックアップ', restore:'復元', delete_all:'すべて削除', search:'保存名、ノート、URLで検索', no_saved:'保存したURLはない。', edit:'編集', delete:'削除', updated:'更新',
+    matrix_title:'組み合わせて一括生成', matrix_hint:'現在のURLをベースに最大200件作成。', replace_key:'置き換えるキー', values:'値（改行またはカンマ区切り）', remove_axis:'この軸を削除', add_axis:'＋ 軸を追加', matrix_empty:'URLと軸の値を入力。', matrix_limit:'先頭200件のみ表示・出力。',
+    my_profiles:'自分用のルール', profile_hint:'よく使うパラメータ構成を保存できる。', profile_name:'例: 自社メール計測ルール', save_profile:'現在の構成を保存', profile_info:'パラメータ名だけを保存する。', no_profiles:'自分用のルールはない。', use:'使う', update:'現在の構成で更新',
+    save_url:'URLを保存', save_question:'どこに保存する？', save_description:'あとで編集する場合に保存方法を選ぶ。', device_save:'この端末に保存', device_save_hint:'あとからこの端末で編集できる。', account_save:'アカウントで保存', account_save_hint:'複数端末・共有に対応予定。準備中。', close:'閉じる',
+    profile_generic:'汎用パラメータ', profile_generic_desc:'任意のキーと値を追加できる。', profile_ga4:'GA4 UTM', profile_ga4_desc:'一般的なUTMパラメータ。', profile_adobe:'Adobe Tracking Code', profile_adobe_desc:'Tracking Codeなどに使える。', profile_campaign:'広告・CRM連携', profile_campaign_desc:'広告・CRM向けの雛形。',
+    source:'参照元', medium:'メディア', campaign:'キャンペーン名', content:'クリエイティブ / CTA', term:'キーワード', campaign_id:'キャンペーンID', platform:'広告プラットフォーム', creative:'クリエイティブ', channel:'チャネル', audience:'オーディエンス', custom_param:'任意パラメータ'
+  },
+  en: {
+    builder:'Build URL', library:'Library', matrix:'Bulk create', profiles:'Profiles',
+    hero:'Build URL parameters<br>with confidence.', hero_sub:'For GA4, Adobe, and custom schemes.',
+    start:'START', what:'What do you want to do?', start_hint:'Choose a starting point.',
+    scratch:'Start from scratch', scratch_hint:'Add any key and value', ga4_start:'Create a GA4 URL', ga4_hint:'Start with UTM fields', adobe_start:'Create an Adobe URL', adobe_hint:'Start with a tracking code', edit_url:'Edit an existing URL', edit_hint:'Paste and inspect it', open_saved:'Edit saved URLs →',
+    inspector:'URL INSPECTOR', inspector_title:'Edit an existing URL', reset:'Reset', parse:'Inspect URL', parse_hint:'Keep and edit existing queries and hashes.',
+    design:'Design parameters', profile:'Profile', save_name:'Save name', destination:'Destination URL', hash:'Hash', parameter:'Parameter', value:'Value', key:'Key', note:'Note', add_param:'＋ Add parameter', no_params:'No parameters yet', no_params_hint:'Add a key and a value.',
+    review:'REVIEW', complete_url:'Final URL', preview_empty:'Enter a destination URL to preview.', copy:'Copy URL', save:'Save', save_hint:'Choose a save method.', check_before:'Check before saving or copying', quality:'Quality check',
+    saved_urls:'Saved URLs', library_hint:'Search, edit, export CSV, or back up.', export_csv:'Export CSV', backup:'Back up', restore:'Restore', delete_all:'Delete all', search:'Search name, note, or URL', no_saved:'No saved URLs.', edit:'Edit', delete:'Delete', updated:'Updated',
+    matrix_title:'Create in bulk', matrix_hint:'Create up to 200 URLs from the current URL.', replace_key:'Parameter to replace', values:'Values (new line or comma)', remove_axis:'Remove axis', add_axis:'＋ Add axis', matrix_empty:'Enter a URL and axis values.', matrix_limit:'Only the first 200 results are shown and exported.',
+    my_profiles:'My profiles', profile_hint:'Save parameter structures you use often.', profile_name:'Example: Company email rules', save_profile:'Save current structure', profile_info:'Only parameter names are saved.', no_profiles:'No custom profiles.', use:'Use', update:'Update from current structure',
+    save_url:'Save URL', save_question:'Where do you want to save it?', save_description:'Choose a save method to edit it later.', device_save:'Save on this device', device_save_hint:'Edit it later on this device.', account_save:'Save with an account', account_save_hint:'Multi-device access and sharing are coming soon.', close:'Close',
+    profile_generic:'Generic parameters', profile_generic_desc:'Add any key and value.', profile_ga4:'GA4 UTM', profile_ga4_desc:'Common UTM parameters.', profile_adobe:'Adobe Tracking Code', profile_adobe_desc:'For tracking codes and more.', profile_campaign:'Ads & CRM', profile_campaign_desc:'A starter for ads and CRM.',
+    source:'Source', medium:'Medium', campaign:'Campaign', content:'Creative / CTA', term:'Keyword', campaign_id:'Campaign ID', platform:'Ad platform', creative:'Creative', channel:'Channel', audience:'Audience', custom_param:'Custom parameter'
+  }
+};
+
 const STARTER_PROFILES = [
-  { id: 'generic', name: '汎用パラメータ', description: '任意のキーと値を自由に追加できます。', fields: [] },
-  { id: 'ga4', name: 'GA4 UTM', description: '一般的なUTMパラメータを入力します。', fields: [
-    { key: 'utm_source', label: '参照元', required: true, choices: COMMON_SOURCES, normalize: 'slug' },
-    { key: 'utm_medium', label: 'メディア', required: true, choices: COMMON_MEDIA, normalize: 'slug' },
-    { key: 'utm_campaign', label: 'キャンペーン名', required: true, normalize: 'slug' },
-    { key: 'utm_content', label: 'クリエイティブ / CTA', normalize: 'slug' },
-    { key: 'utm_term', label: 'キーワード', normalize: 'slug' },
-    { key: 'utm_id', label: 'キャンペーンID', normalize: 'slug' },
-    { key: 'utm_source_platform', label: '広告プラットフォーム', choices: ['google_ads', 'meta_ads', 'linkedin_ads', 'x_ads'], normalize: 'slug' }
+  { id: 'generic', nameKey: 'profile_generic', descriptionKey: 'profile_generic_desc', fields: [] },
+  { id: 'ga4', nameKey: 'profile_ga4', descriptionKey: 'profile_ga4_desc', fields: [
+    { key: 'utm_source', labelKey: 'source', required: true, choices: COMMON_SOURCES, normalize: 'slug' },
+    { key: 'utm_medium', labelKey: 'medium', required: true, choices: COMMON_MEDIA, normalize: 'slug' },
+    { key: 'utm_campaign', labelKey: 'campaign', required: true, normalize: 'slug' },
+    { key: 'utm_content', labelKey: 'content', normalize: 'slug' },
+    { key: 'utm_term', labelKey: 'term', normalize: 'slug' },
+    { key: 'utm_id', labelKey: 'campaign_id', normalize: 'slug' },
+    { key: 'utm_source_platform', labelKey: 'platform', choices: ['google_ads', 'meta_ads', 'linkedin_ads', 'x_ads'], normalize: 'slug' }
   ] },
-  { id: 'adobe', name: 'Adobe Tracking Code', description: 'Adobe Analyticsの追跡コードなど、組織固有の形式で利用できます。', fields: [
+  { id: 'adobe', nameKey: 'profile_adobe', descriptionKey: 'profile_adobe_desc', fields: [
     { key: 'cid', label: 'Tracking Code (cid)', required: true },
-    { key: 'source', label: '参照元', choices: COMMON_SOURCES, normalize: 'slug' },
-    { key: 'campaign', label: 'キャンペーン名', normalize: 'slug' },
-    { key: 'creative', label: 'クリエイティブ', normalize: 'slug' }
+    { key: 'source', labelKey: 'source', choices: COMMON_SOURCES, normalize: 'slug' },
+    { key: 'campaign', labelKey: 'campaign', normalize: 'slug' },
+    { key: 'creative', labelKey: 'creative', normalize: 'slug' }
   ] },
-  { id: 'campaign', name: '広告・CRM連携', description: '広告配信やCRMに渡す独自パラメータを始めるための雛形です。', fields: [
-    { key: 'campaign_id', label: 'キャンペーンID', required: true, normalize: 'slug' },
-    { key: 'channel', label: 'チャネル', required: true, choices: ['email', 'paid_social', 'search', 'display', 'partner', 'offline'], normalize: 'slug' },
-    { key: 'creative_id', label: 'クリエイティブID', normalize: 'slug' },
-    { key: 'audience', label: 'オーディエンス', normalize: 'slug' }
+  { id: 'campaign', nameKey: 'profile_campaign', descriptionKey: 'profile_campaign_desc', fields: [
+    { key: 'campaign_id', labelKey: 'campaign_id', required: true, normalize: 'slug' },
+    { key: 'channel', labelKey: 'channel', required: true, choices: ['email', 'paid_social', 'search', 'display', 'partner', 'offline'], normalize: 'slug' },
+    { key: 'creative_id', labelKey: 'creative', normalize: 'slug' },
+    { key: 'audience', labelKey: 'audience', normalize: 'slug' }
   ] }
 ];
 
@@ -89,6 +123,7 @@ const app = Vue.createApp({
   data() {
     return {
       activeTab: 'builder',
+      locale: localStorage.getItem(LOCALE_KEY) === 'en' ? 'en' : 'ja',
       document: blankDocument(),
       documents: migrateLegacyDocuments(),
       customProfiles: readStorage(PROFILES_KEY, []),
@@ -105,16 +140,17 @@ const app = Vue.createApp({
     };
   },
   computed: {
+    tabs() { return [{ id:'builder', label:this.t('builder') }, { id:'library', label:this.t('library') }, { id:'matrix', label:this.t('matrix') }, { id:'profiles', label:this.t('profiles') }]; },
     profiles() { return [...STARTER_PROFILES, ...this.customProfiles]; },
     activeProfile() { return this.profiles.find((profile) => profile.id === this.document.profileId) || STARTER_PROFILES[0]; },
     outputUrl() { return buildUrl(this.document); },
     errors() {
       const errors = [];
-      if (!this.document.baseUrl.trim()) errors.push('遷移先URLを入力してください。');
-      else if (!safeUrl(this.document.baseUrl)) errors.push('遷移先URLの形式が正しくありません。');
+      if (!this.document.baseUrl.trim()) errors.push(this.locale === 'ja' ? '遷移先URLを入力してください。' : 'Enter a destination URL.');
+      else if (!safeUrl(this.document.baseUrl)) errors.push(this.locale === 'ja' ? '遷移先URLの形式が正しくありません。' : 'Enter a valid URL.');
       const required = profileFields(this.activeProfile).filter((field) => field.required);
-      required.forEach((field) => { if (!this.paramValue(field.key).trim()) errors.push(`${field.label}（${field.key}）を入力してください。`); });
-      this.document.params.forEach((param, index) => { if (param.value && !param.key.trim()) errors.push(`${index + 1}行目のパラメータ名を入力してください。`); });
+      required.forEach((field) => { if (!this.paramValue(field.key).trim()) errors.push(this.locale === 'ja' ? `${this.fieldLabel(field)}（${field.key}）を入力してください。` : `Enter ${this.fieldLabel(field)} (${field.key}).`); });
+      this.document.params.forEach((param, index) => { if (param.value && !param.key.trim()) errors.push(this.locale === 'ja' ? `${index + 1}行目のパラメータ名を入力してください。` : `Enter a parameter name on row ${index + 1}.`); });
       return errors;
     },
     warnings() {
@@ -151,10 +187,16 @@ const app = Vue.createApp({
     }
   },
   methods: {
+    t(key) { return MESSAGES[this.locale]?.[key] || MESSAGES.ja[key] || key; },
+    setLocale(locale) { this.locale = locale; localStorage.setItem(LOCALE_KEY, locale); },
+    profileLabel(profile) { return profile?.nameKey ? this.t(profile.nameKey) : (profile?.name || ''); },
+    profileDescription(profile) { return profile?.descriptionKey ? this.t(profile.descriptionKey) : (profile?.description || ''); },
+    fieldLabel(field) { return field?.labelKey ? this.t(field.labelKey) : (field?.label || field?.key || ''); },
+    formatDate(value) { return new Date(value).toLocaleString(this.locale === 'ja' ? 'ja-JP' : 'en-US'); },
     notify(message, type = 'success') { this.message = message; this.messageType = type; },
     paramValue(key) { return this.document.params.find((param) => param.key === key)?.value || ''; },
     fieldFor(key) { return profileFields(this.activeProfile).find((field) => field.key === key); },
-    displayLabel(param) { return this.fieldFor(param.key)?.label || '任意パラメータ'; },
+    displayLabel(param) { return this.fieldFor(param.key) ? this.fieldLabel(this.fieldFor(param.key)) : this.t('custom_param'); },
     parsePastedUrl() {
       try {
         const parsed = parseUrl(this.pasteUrl);
@@ -173,7 +215,7 @@ const app = Vue.createApp({
       const profileParams = fields.map((field) => blankParameter(field.key, existing.get(field.key) || ''));
       const unknownParams = this.document.params.filter((param) => !managedKeys.has(param.key));
       this.document.params = [...profileParams, ...unknownParams];
-      this.notify(`${profile.name}の項目を適用しました。`);
+      this.notify(this.locale === 'ja' ? `${this.profileLabel(profile)}の項目を適用しました。` : `Applied ${this.profileLabel(profile)} fields.`);
     },
     changeProfile() { this.applyProfile(); },
     addParameter() { this.document.params.push(blankParameter()); },
@@ -217,7 +259,7 @@ const app = Vue.createApp({
       this.pasteUrl = '';
       if (profileId === 'generic') this.document.params = [blankParameter()];
       else this.applyProfile();
-      this.notify(profileId === 'generic' ? '自由入力モードで開始しました。キーと値を入力してください。' : `${this.activeProfile.name}の入力欄を用意しました。`);
+      this.notify(profileId === 'generic' ? (this.locale === 'ja' ? 'キーと値を入力してください。' : 'Add a key and value.') : (this.locale === 'ja' ? `${this.profileLabel(this.activeProfile)}の入力欄を用意しました。` : `${this.profileLabel(this.activeProfile)} fields are ready.`));
     },
     focusPaste() {
       this.$nextTick(() => document.getElementById('paste-url')?.focus());
@@ -269,7 +311,7 @@ const app = Vue.createApp({
       reader.readAsText(file);
       event.target.value = '';
     },
-    profileNameFor(id) { return this.profiles.find((profile) => profile.id === id)?.name || '不明なプロファイル'; },
+    profileNameFor(id) { const profile = this.profiles.find((item) => item.id === id); return profile ? this.profileLabel(profile) : (this.locale === 'ja' ? '不明なプロファイル' : 'Unknown profile'); },
     saveCustomProfile() {
       const name = this.profileName.trim();
       const fields = this.document.params.filter((param) => param.key.trim()).map((param) => ({ key: param.key.trim(), label: param.key.trim(), required: false }));
@@ -301,31 +343,31 @@ const app = Vue.createApp({
   },
   template: `
     <main class="app-shell">
-      <header class="hero"><div><p class="eyebrow">URL PARAMETER STUDIO</p><h1>URLパラメータを、<br>迷わず作る。</h1><p>GA4・Adobe・独自仕様に対応。</p></div></header>
-      <nav class="tabs" aria-label="機能メニュー"><button v-for="tab in [{id:'builder',label:'URLを作る'},{id:'library',label:'ライブラリ'},{id:'matrix',label:'一括生成'},{id:'profiles',label:'プロファイル'}]" :key="tab.id" type="button" :class="{active:activeTab===tab.id}" @click="activeTab=tab.id">{{ tab.label }}</button></nav>
+      <header class="hero"><div><div class="locale-switch" aria-label="Language"><button type="button" :class="{active:locale==='ja'}" @click="setLocale('ja')">日本語</button><button type="button" :class="{active:locale==='en'}" @click="setLocale('en')">English</button></div><p class="eyebrow">URL PARAMETER STUDIO</p><h1 v-html="t('hero')"></h1><p>{{ t('hero_sub') }}</p></div></header>
+      <nav class="tabs" :aria-label="t('builder')"><button v-for="tab in tabs" :key="tab.id" type="button" :class="{active:activeTab===tab.id}" @click="activeTab=tab.id">{{ tab.label }}</button></nav>
 
       <section v-if="activeTab==='builder'" class="workspace">
         <div class="builder-main">
-          <section class="start-panel" aria-labelledby="start-title"><div><p class="eyebrow">START HERE</p><h2 id="start-title">何をしたいですか？</h2><p>目的を選ぶだけで、必要な入力欄を準備します。</p></div><div class="start-grid"><button type="button" class="start-card primary-start" @click="startWithProfile('generic')"><strong>ゼロから作る</strong><span>自分でキーと値を追加する</span></button><button type="button" class="start-card" @click="startWithProfile('ga4')"><strong>GA4のURLを作る</strong><span>UTMの入力欄を用意する</span></button><button type="button" class="start-card" @click="startWithProfile('adobe')"><strong>Adobe用に作る</strong><span>Tracking Codeから始める</span></button><button type="button" class="start-card" @click="focusPaste"><strong>既存URLを編集する</strong><span>貼り付けてパラメータを解析</span></button></div><button type="button" class="library-link" @click="openLibrary">保存済みのURLを編集する →</button></section>
-          <section class="panel intake"><div class="section-heading"><div><p class="eyebrow">URL INSPECTOR</p><h2>既存URLを編集する場合</h2></div><button type="button" class="quiet" @click="newDocument">入力をリセット</button></div><div class="paste-row"><input id="paste-url" v-model="pasteUrl" type="url" inputmode="url" placeholder="https://example.com/page?existing=value#section" aria-label="解析するURL"><button type="button" @click="parsePastedUrl">貼り付けたURLを解析</button></div><p class="hint">既存のクエリ・ハッシュを分解し、未知のパラメータも残したまま編集できます。</p></section>
-          <section class="panel"><div class="section-heading"><div><p class="eyebrow">02 / DESIGN</p><h2>パラメータを設計</h2></div><span class="profile-pill">{{ activeProfile.name }}</span></div>
-            <div class="field-grid compact"><div class="field"><label for="profile">プロファイル</label><select id="profile" v-model="document.profileId" @change="changeProfile"><option v-for="profile in profiles" :key="profile.id" :value="profile.id">{{ profile.name }}</option></select><p>{{ activeProfile.description }}</p></div><div class="field"><label for="title">保存名</label><input id="title" v-model="document.title" placeholder="例: 秋セール メール配信"></div></div>
-            <div class="field wide"><label for="base-url">遷移先URL</label><input id="base-url" v-model="document.baseUrl" type="url" inputmode="url" placeholder="https://example.com/service"><p v-if="document.hash">ハッシュ: {{ document.hash }}</p></div>
-            <div class="parameter-head"><span>パラメータ</span><span>値</span><span aria-hidden="true"></span></div>
+          <section class="start-panel" aria-labelledby="start-title"><div><p class="eyebrow">{{ t('start') }}</p><h2 id="start-title">{{ t('what') }}</h2><p>{{ t('start_hint') }}</p></div><div class="start-grid"><button type="button" class="start-card primary-start" @click="startWithProfile('generic')"><strong>{{ t('scratch') }}</strong><span>{{ t('scratch_hint') }}</span></button><button type="button" class="start-card" @click="startWithProfile('ga4')"><strong>{{ t('ga4_start') }}</strong><span>{{ t('ga4_hint') }}</span></button><button type="button" class="start-card" @click="startWithProfile('adobe')"><strong>{{ t('adobe_start') }}</strong><span>{{ t('adobe_hint') }}</span></button><button type="button" class="start-card" @click="focusPaste"><strong>{{ t('edit_url') }}</strong><span>{{ t('edit_hint') }}</span></button></div><button type="button" class="library-link" @click="openLibrary">{{ t('open_saved') }}</button></section>
+          <section class="panel intake"><div class="section-heading"><div><p class="eyebrow">{{ t('inspector') }}</p><h2>{{ t('inspector_title') }}</h2></div><button type="button" class="quiet" @click="newDocument">{{ t('reset') }}</button></div><div class="paste-row"><input id="paste-url" v-model="pasteUrl" type="url" inputmode="url" placeholder="https://example.com/page?existing=value#section" :aria-label="t('parse')"><button type="button" @click="parsePastedUrl">{{ t('parse') }}</button></div><p class="hint">{{ t('parse_hint') }}</p></section>
+          <section class="panel"><div class="section-heading"><div><p class="eyebrow">02 / {{ t('design') }}</p><h2>{{ t('design') }}</h2></div><span class="profile-pill">{{ profileLabel(activeProfile) }}</span></div>
+            <div class="field-grid compact"><div class="field"><label for="profile">{{ t('profile') }}</label><select id="profile" v-model="document.profileId" @change="changeProfile"><option v-for="profile in profiles" :key="profile.id" :value="profile.id">{{ profileLabel(profile) }}</option></select><p>{{ profileDescription(activeProfile) }}</p></div><div class="field"><label for="title">{{ t('save_name') }}</label><input id="title" v-model="document.title" :placeholder="t('save_name')"></div></div>
+            <div class="field wide"><label for="base-url">{{ t('destination') }}</label><input id="base-url" v-model="document.baseUrl" type="url" inputmode="url" placeholder="https://example.com/service"><p v-if="document.hash">{{ t('hash') }}: {{ document.hash }}</p></div>
+            <div class="parameter-head"><span>{{ t('parameter') }}</span><span>{{ t('value') }}</span><span aria-hidden="true"></span></div>
             <div v-for="(param,index) in document.params" :key="param.id" class="parameter-row"><div><label class="sr-only" :for="'key-'+param.id">パラメータ名</label><input :id="'key-'+param.id" v-model="param.key" placeholder="キー"><small>{{ displayLabel(param) }}</small></div><div><label class="sr-only" :for="'value-'+param.id">値</label><input :id="'value-'+param.id" v-model="param.value" @change="normalizeParameter(param)" :list="fieldFor(param.key)?.choices ? 'choices-'+param.id : null" placeholder="値"><datalist v-if="fieldFor(param.key)?.choices" :id="'choices-'+param.id"><option v-for="choice in fieldFor(param.key).choices" :key="choice" :value="choice"></option></datalist></div><div class="row-actions"><button type="button" class="icon-button" :disabled="index===0" @click="moveParameter(index,-1)" aria-label="上へ移動">↑</button><button type="button" class="icon-button" :disabled="index===document.params.length-1" @click="moveParameter(index,1)" aria-label="下へ移動">↓</button><button type="button" class="icon-button danger" @click="removeParameter(param.id)" aria-label="削除">×</button></div></div>
-            <div v-if="!document.params.length" class="parameter-empty"><strong>まだパラメータはありません</strong><span>「パラメータを追加」から、たとえば <code>source</code> と <code>newsletter</code> のように自由に入力できます。</span></div><button type="button" class="add-button" @click="addParameter">＋ パラメータを追加</button>
-            <div class="field note-field"><label for="note">ノート</label><textarea id="note" v-model="document.note" rows="3" placeholder="用途、掲載場所、担当者、配信期限などを残せます。"></textarea></div>
+            <div v-if="!document.params.length" class="parameter-empty"><strong>{{ t('no_params') }}</strong><span>{{ t('no_params_hint') }}</span></div><button type="button" class="add-button" @click="addParameter">{{ t('add_param') }}</button>
+            <div class="field note-field"><label for="note">{{ t('note') }}</label><textarea id="note" v-model="document.note" rows="3" :placeholder="t('note')"></textarea></div>
           </section>
         </div>
-        <aside class="preview-column"><section class="panel sticky"><p class="eyebrow">03 / REVIEW</p><h2>完成URL</h2><output class="url-output" :class="{empty:!outputUrl}">{{ outputUrl || '遷移先URLを入力するとプレビューが表示されます。' }}</output><div class="actions"><button type="button" class="primary" :disabled="!outputUrl || errors.length" @click="copyUrl">URLをコピー</button><button type="button" @click="openSaveChoices">保存する</button></div><p class="local-note">保存する場合のみ、保存方法を選べます。</p><div v-if="errors.length" class="notice error" role="alert"><strong>保存・コピー前に確認</strong><ul><li v-for="error in errors" :key="error">{{ error }}</li></ul></div><div v-if="warnings.length" class="notice warning"><strong>品質チェック</strong><ul><li v-for="warning in warnings" :key="warning">{{ warning }}</li></ul></div><p v-if="message" class="message" :class="messageType" role="status">{{ message }}</p></section></aside>
+        <aside class="preview-column"><section class="panel sticky"><p class="eyebrow">03 / {{ t('review') }}</p><h2>{{ t('complete_url') }}</h2><output class="url-output" :class="{empty:!outputUrl}">{{ outputUrl || t('preview_empty') }}</output><div class="actions"><button type="button" class="primary" :disabled="!outputUrl || errors.length" @click="copyUrl">{{ t('copy') }}</button><button type="button" @click="openSaveChoices">{{ t('save') }}</button></div><p class="local-note">{{ t('save_hint') }}</p><div v-if="errors.length" class="notice error" role="alert"><strong>{{ t('check_before') }}</strong><ul><li v-for="error in errors" :key="error">{{ error }}</li></ul></div><div v-if="warnings.length" class="notice warning"><strong>{{ t('quality') }}</strong><ul><li v-for="warning in warnings" :key="warning">{{ warning }}</li></ul></div><p v-if="message" class="message" :class="messageType" role="status">{{ message }}</p></section></aside>
       </section>
 
-      <section v-else-if="activeTab==='library'" class="panel full-panel"><div class="section-heading"><div><p class="eyebrow">SAVED URLS</p><h2>保存したURL</h2><p class="hint">検索、編集、CSV出力、バックアップができます。</p></div><div class="section-actions"><button type="button" @click="exportDocumentsCsv">CSV出力</button><button type="button" @click="exportBackup">バックアップ</button><button type="button" @click="selectBackup">復元</button><button type="button" class="danger" @click="clearDocuments">すべて削除</button><input ref="backupFile" class="sr-only" type="file" accept="application/json" @change="importBackup"></div></div><input v-model="search" class="search" type="search" placeholder="保存名、ノート、URLで検索"><p v-if="!filteredDocuments.length" class="empty-state">保存されたURLはありません。ビルダーで作成後、「保存する」から保存方法を選んでください。</p><ul v-else class="document-list"><li v-for="item in filteredDocuments" :key="item.id" class="document-card"><div><p class="document-profile">{{ profileNameFor(item.profileId) }}</p><h3>{{ item.title }}</h3><p v-if="item.note" class="document-note">{{ item.note }}</p><code>{{ buildUrl(item) }}</code><p class="timestamp">更新: {{ new Date(item.updatedAt).toLocaleString('ja-JP') }}</p></div><div class="record-actions"><button type="button" @click="openDocument(item)">編集する</button><button type="button" class="danger" @click="deleteDocument(item.id)">削除</button></div></li></ul></section>
+      <section v-else-if="activeTab==='library'" class="panel full-panel"><div class="section-heading"><div><p class="eyebrow">SAVED URLS</p><h2>{{ t('saved_urls') }}</h2><p class="hint">{{ t('library_hint') }}</p></div><div class="section-actions"><button type="button" @click="exportDocumentsCsv">{{ t('export_csv') }}</button><button type="button" @click="exportBackup">{{ t('backup') }}</button><button type="button" @click="selectBackup">{{ t('restore') }}</button><button type="button" class="danger" @click="clearDocuments">{{ t('delete_all') }}</button><input ref="backupFile" class="sr-only" type="file" accept="application/json" @change="importBackup"></div></div><input v-model="search" class="search" type="search" :placeholder="t('search')"><p v-if="!filteredDocuments.length" class="empty-state">{{ t('no_saved') }}</p><ul v-else class="document-list"><li v-for="item in filteredDocuments" :key="item.id" class="document-card"><div><p class="document-profile">{{ profileNameFor(item.profileId) }}</p><h3>{{ item.title }}</h3><p v-if="item.note" class="document-note">{{ item.note }}</p><code>{{ buildUrl(item) }}</code><p class="timestamp">{{ t('updated') }}: {{ formatDate(item.updatedAt) }}</p></div><div class="record-actions"><button type="button" @click="openDocument(item)">{{ t('edit') }}</button><button type="button" class="danger" @click="deleteDocument(item.id)">{{ t('delete') }}</button></div></li></ul></section>
 
       <section v-else-if="activeTab==='matrix'" class="panel full-panel"><div class="section-heading"><div><p class="eyebrow">CAMPAIGN MATRIX</p><h2>組み合わせて、一括生成</h2><p class="hint">現在のURLをベースに、媒体・クリエイティブなどの組み合わせを最大200件作れます。</p></div><button type="button" class="primary" @click="exportMatrix">CSVを出力</button></div><div class="matrix-grid"><div v-for="axis in matrixAxes" :key="axis.id" class="axis-card"><label>置き換えるキー<input v-model="axis.key" placeholder="utm_content"></label><label>値（改行またはカンマ区切り）<textarea v-model="axis.values" rows="5" placeholder="hero_cta\nfooter_cta"></textarea></label><button type="button" class="danger text-button" @click="removeAxis(axis.id)">この軸を削除</button></div><button type="button" class="add-axis" @click="addAxis">＋ 軸を追加</button></div><p v-if="matrixResults.length >= 200" class="notice warning">組み合わせが多いため、先頭200件のみ表示・出力します。</p><p v-if="!matrixResults.length" class="empty-state">ビルダーで遷移先URLを入力し、少なくとも1つの軸に値を指定してください。</p><ol v-else class="matrix-results"><li v-for="item in matrixResults" :key="item.url"><strong>{{ item.label }}</strong><code>{{ item.url }}</code></li></ol></section>
 
       <section v-else class="panel full-panel"><div class="section-heading"><div><p class="eyebrow">MY PROFILES</p><h2>自分用のルールを保存</h2><p class="hint">よく使う独自パラメータ構成を、次回からすぐ呼び出せます。</p></div></div><div class="profile-create"><input v-model="profileName" placeholder="例: 自社メール計測ルール"><button type="button" class="primary" @click="saveCustomProfile">現在の構成を保存</button></div><p class="hint">ビルダーにあるパラメータ名を、そのままプロファイルの項目として保存します。値は保存されません。</p><p v-if="!customProfiles.length" class="empty-state">まだ自分用のルールはありません。ビルダーで項目を整えてから保存してください。</p><ul v-else class="profile-list"><li v-for="profile in customProfiles" :key="profile.id"><div><h3>{{ profile.name }}</h3><p>{{ profile.fields.map(field => field.key).join(', ') }}</p></div><div class="record-actions"><button type="button" @click="useProfile(profile)">使う</button><button type="button" @click="updateCustomProfile(profile)">現在の構成で更新</button><button type="button" class="danger" @click="deleteCustomProfile(profile.id)">削除</button></div></li></ul></section>
-      <div v-if="showSaveChoices" class="modal-backdrop" role="presentation" @click.self="showSaveChoices=false"><section class="save-dialog" role="dialog" aria-modal="true" aria-labelledby="save-title"><button type="button" class="close-dialog" aria-label="閉じる" @click="showSaveChoices=false">×</button><p class="eyebrow">SAVE URL</p><h2 id="save-title">どこに保存しますか？</h2><p>あとで編集したい場合に、保存方法を選べます。</p><div class="save-options"><button type="button" class="save-option" @click="saveDocument"><strong>この端末に保存</strong><span>アカウントなしで、あとからこの端末で編集できます。</span></button><button type="button" class="save-option account-option" @click="saveToAccount"><strong>アカウントで保存</strong><span>複数端末での利用・共有に対応予定です。現在は準備中です。</span></button></div></section></div>
+      <div v-if="showSaveChoices" class="modal-backdrop" role="presentation" @click.self="showSaveChoices=false"><section class="save-dialog" role="dialog" aria-modal="true" aria-labelledby="save-title"><button type="button" class="close-dialog" :aria-label="t('close')" @click="showSaveChoices=false">×</button><p class="eyebrow">SAVE URL</p><h2 id="save-title">{{ t('save_question') }}</h2><p>{{ t('save_description') }}</p><div class="save-options"><button type="button" class="save-option" @click="saveDocument"><strong>{{ t('device_save') }}</strong><span>{{ t('device_save_hint') }}</span></button><button type="button" class="save-option account-option" @click="saveToAccount"><strong>{{ t('account_save') }}</strong><span>{{ t('account_save_hint') }}</span></button></div></section></div>
     </main>`
 });
 
