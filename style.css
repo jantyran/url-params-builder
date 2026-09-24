@@ -90,3 +90,26 @@ input:hover,select:hover,textarea:hover { border-color:#8295ae; }
 @media (max-width:900px) { .workspace { gap:24px; }.start-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }.start-card:nth-child(2) { border-right:0; }.start-card:nth-child(-n+2) { border-bottom:1px solid var(--line); } }
 @media (max-width:620px) { .app-shell { width:min(100% - 28px,1180px); padding-top:18px; }.hero { padding-top:52px; }.hero h1 { font-size:2.55rem; }.hero > div > p:last-child { font-size:.88rem; }.locale-switch { left:0; right:auto; }.tabs { margin-bottom:22px; }.tabs button { min-height:42px; padding:.55rem .75rem; font-size:.85rem; }.start-grid { grid-template-columns:1fr; }.start-card,.start-card:nth-child(2) { min-height:76px; border-right:0; border-bottom:1px solid var(--line); }.start-card:last-child { border-bottom:0; }.start-card strong { font-size:.9rem; }.start-card span { font-size:.74rem; }.parameter-row { padding:10px; }.sticky { padding:18px; }.url-output { min-height:130px; }.full-panel { padding-top:22px; } }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto !important; transition:none !important; } }
+
+/* 操作部をコンパクトにし、内容の読み取りを優先 */
+button { min-height:38px; padding:.5rem .72rem; }
+input,select,textarea { min-height:42px; padding:.6rem .7rem; }
+.tabs button { min-height:42px; padding:.52rem .9rem; }
+.start-panel { padding-bottom:20px; }
+.start-grid { margin-top:12px; }
+.start-card { min-height:96px; padding:12px; }
+.start-card::after { display:none; }
+.start-card strong { font-size:.88rem; }
+.start-card span { font-size:.71rem; }
+.primary-start { box-shadow:inset 0 2px 0 var(--brand); }
+.intake,.builder-main > .panel:not(.start-panel) { padding-top:18px; }
+.parameter-row { padding:6px; }
+.parameter-row input,.icon-button { min-height:36px; height:36px; }
+.add-button { min-height:38px; }
+.sticky { padding:18px; }
+.sticky h2 { margin-bottom:10px; padding-bottom:10px; }
+.url-output { min-height:145px; padding:12px; }
+.actions { margin-top:10px; }
+.actions button { min-height:40px; }
+.save-option { padding:13px; }
+@media (max-width:620px) { .start-card,.start-card:nth-child(2) { min-height:64px; padding:10px 12px; }.actions button { min-height:42px; } }
