@@ -9,7 +9,7 @@ const COMMON_MEDIA = ['email', 'social', 'paid_social', 'cpc', 'display', 'refer
 const MESSAGES = {
   ja: {
     builder:'URLを作る', library:'ライブラリ', matrix:'まとめて作る', profiles:'テンプレート',
-    hero:'URLパラメーターに<br>迷わない。', hero_sub:'UTM・Tracking Code・独自パラメーターに対応。',
+    hero:'URLパラメーターに迷わない。', hero_sub:'UTM・Tracking Code・独自パラメーターに対応。',
     start:'作成', what:'URLを作る', start_hint:'用途別の作成方法',
     scratch:'自由に作る', scratch_hint:'任意のパラメータを追加', web_start:'Webトラッキング', web_hint:'UTMパラメータ', campaign_start:'広告・CRM計測', campaign_hint:'Campaign IDなど', edit_url:'URLを読み込んで編集', edit_hint:'既存URLを貼り付け', open_saved:'保存したURLを編集 →',
     inspector_title:'URLを読み込む', reset:'リセット', parse:'読み込む', parse_hint:'クエリ・ハッシュを保ったまま編集',
@@ -24,7 +24,7 @@ const MESSAGES = {
   },
   en: {
     builder:'Build URL', library:'Library', matrix:'Bulk create', profiles:'Templates',
-    hero:'Build URL parameters<br>with confidence.', hero_sub:'For GA4, Adobe, and custom schemes.',
+    hero:'Build URL parameters with confidence.', hero_sub:'For GA4, Adobe, and custom schemes.',
     start:'CREATE', what:'Create URL', start_hint:'Choose how to start',
     scratch:'Create freely', scratch_hint:'Add any parameter', web_start:'Web tracking', web_hint:'UTM parameters', campaign_start:'Ads & CRM tracking', campaign_hint:'Campaign ID and more', edit_url:'Load and edit a URL', edit_hint:'Paste an existing URL', open_saved:'Edit saved URLs →',
     inspector_title:'Load a URL', reset:'Reset', parse:'Load', parse_hint:'Keep existing queries and hashes',
